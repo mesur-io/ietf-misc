@@ -132,9 +132,9 @@ SHOULD be followed.
 
 ## Media Type Registration
 
-This section will register the "application/vc+jwt" media type [RFC2046]
+This section will register the "application/vc+jwt" media type [@!RFC2046]
 in the "Media Types" registry [IANA.MediaTypes] in the manner described
-in RFC 6838 [RFC6838], which can be used to indicate that the content is
+in RFC 6838 [@!RFC6838], which can be used to indicate that the content is
 a JWT.
 
 * Type name: application
