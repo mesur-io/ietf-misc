@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- name="GENERATOR" content="github.com/mmarkdown/mmark Mmark Markdown Processor - mmark.miek.nl" -->
+<rfc version="3" ipr="trust200902" docName="draft-prorock-jose-native-jwt-vcs-00" submissionType="IETF" category="std" xml:lang="en" xmlns:xi="http://www.w3.org/2001/XInclude" indexInclude="true" consensus="true">
+
+<front>
+<title abbrev="native-jwt-vcs">Native JWT Representation of Verifiable Credentials</title><seriesInfo value="draft-prorock-jose-native-jwt-vcs-00" stream="IETF" status="standard" name="Internet-Draft"></seriesInfo>
+<author initials="M." surname="Prorock" fullname="Michael Prorock"><organization>mesur.io</organization><address><postal><street></street>
+</postal><email>mprorock@mesur.io</email>
+</address></author><author initials="O." surname="Steele" fullname="Orie Steele"><organization>Transmute</organization><address><postal><street></street>
+</postal><email>orie@transmute.industries</email>
+</address></author><date/>
+<area>Internet</area>
+<workgroup>None</workgroup>
+<keyword>JOSE</keyword>
+<keyword>COSE</keyword>
+<keyword>JWT</keyword>
+<keyword>CWT</keyword>
+
+<abstract>
+<t>This document describes how to construct and utilize
+a JWT as a Verifiable Credential utilizing only JSON
+and registered claims.</t>
+<t>This document does not define any new cryptography,
+only seralizations of systems.</t>
+</abstract>
+
+</front>
+
+<middle>
+
+<section anchor="notational-conventions"><name>Notational Conventions</name>
+<t>The key words &quot;<bcp14>MUST</bcp14>&quot;, &quot;<bcp14>MUST NOT</bcp14>&quot;, &quot;<bcp14>REQUIRED</bcp14>&quot;, &quot;<bcp14>SHALL</bcp14>&quot;, &quot;<bcp14>SHALL NOT</bcp14>&quot;, &quot;<bcp14>SHOULD</bcp14>&quot;,
+&quot;<bcp14>SHOULD NOT</bcp14>&quot;, &quot;<bcp14>RECOMMENDED</bcp14>&quot;, &quot;<bcp14>MAY</bcp14>&quot;, and &quot;<bcp14>OPTIONAL</bcp14>&quot; in this
+document are to be interpreted as described in <xref target="RFC2119"></xref>.</t>
+</section>
+
+<section anchor="terminology"><name>Terminology</name>
+<t>The following terminology is used throughout this document:</t>
+
+<dl spacing="compact">
+<dt>signature</dt>
+<dd>The digital signature output.</dd>
+</dl>
+</section>
+
+<section anchor="native-jwt-representation-of-verifiable-credentials"><name>Native JWT Representation of Verifiable Credentials</name>
+
+<section anchor="overview"><name>Overview</name>
+<t>This section provides guidance on how to use JSON <xref target="RFC8259"></xref> claimsets
+with JWT <xref target="RFC7519"></xref> registered claims to construct a JWT that can be mapped to a
+verifiable credential. This section also describes how to use content
+types and token types to distinguish different representations of
+verifiable credentials.</t>
+<t>This representation relies on claims registered in the <eref target="https://www.iana.org/assignments/jwt/jwt.xhtml#claims">IANA
+JSON Web Token Claims Registry</eref>
+whenever possible.</t>
+<t>Implementers using this representation SHOULD NOT use <tt>vc+ld+json</tt> as
+an input.</t>
+
+<section anchor="credential-header"><name>Credential Header</name>
+<t><tt>typ</tt> MUST use the media type <tt>vc+jwt</tt>.</t>
+<t>Example of credential metadata (decoded JWT header):</t>
+
+<sourcecode type="json">{
+  &quot;kid&quot;: &quot;https://example.edu/issuers/14#key-0&quot;,
+  &quot;alg&quot;: &quot;ES256&quot;,
+  &quot;typ&quot;: &quot;vc+jwt&quot;
+}
+</sourcecode>
+</section>
+
+<section anchor="credential"><name>Credential</name>
+<t>Example of a credential (decoded JWT payload):</t>
+
+<sourcecode type="json">{ 
+  &quot;iss&quot;: &quot;https://example.edu/issuers/14&quot;,
+  &quot;sub&quot;: &quot;1234567890&quot;,
+  &quot;name&quot;: &quot;John Doe&quot;,
+  &quot;iat&quot;: 1516239022,
+  &quot;urn:example:claim&quot;: true
+}
+</sourcecode>
+<t>NOTE: The <tt>vc</tt> and <tt>vp</tt> claims MUST NOT be present when the content
+type header parameter is set to <tt>credential-claims-set+json</tt>.</t>
+</section>
+
+<section anchor="verifiable-credential"><name>Verifiable Credential</name>
+<t>Example of an JWT encoded verifiable credential (using external proof):</t>
+
+<sourcecode type="json">=============== NOTE: '\' line wrapping per RFC 8792 ================
+eyJraWQiOiJodHRwczovL2V4YW1wbGUuZWR1L2lzc3VlcnMvMTQja2V5LTAiLCJhbGci\
+OiJFUzI1NiIsInR5cCI6InZjK2p3dCJ9.eyJpc3MiOiJodHRwczovL2V4YW1wbGUuZWR\
+1L2lzc3VlcnMvMTQiLCJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiw\
+iaWF0IjoxNTE2MjM5MDIyLCJ1cm46ZXhhbXBsZTpjbGFpbSI6dHJ1ZX0.WLD4Qxh629T\
+FkJHzmbkWEefYX-QPkdCmxbBMKNHErxND2QpjVBbatxHkxS9Y_SzBmwffuM2E9i5VvVg\
+pZ6v4Tg
+</sourcecode>
+</section>
+</section>
+</section>
+
+<section anchor="security-considerations"><name>Security Considerations</name>
+<t>All security considerations from JSON <xref target="RFC8259"></xref> and JWT <xref target="RFC7519"></xref>
+SHOULD be followed.</t>
+</section>
+
+<section anchor="iana-considerations"><name>IANA Considerations</name>
+
+<section anchor="media-type-registration"><name>Media Type Registration</name>
+<t>This section will register the &quot;application/vc+jwt&quot; media type <xref target="RFC2046"></xref>
+in the &quot;Media Types&quot; registry [IANA.MediaTypes] in the manner described
+in RFC 6838 <xref target="RFC6838"></xref>, which can be used to indicate that the content is
+a JWT.</t>
+
+<ul spacing="compact">
+<li>Type name: application</li>
+<li>Subtype name: vc+jwt</li>
+<li>Required parameters: n/a</li>
+<li>Optional parameters: n/a</li>
+<li>Encoding considerations: 8bit; JWT values are encoded as a series
+of base64url-encoded values (some of which may be the empty
+string) separated by period ('.') characters.</li>
+<li>Security considerations: See the Security Considerations section
+of RFC 7519</li>
+<li>Interoperability considerations: n/a</li>
+<li>Published specification: n/a</li>
+<li>Applications that use this media type: OpenID Connect, Mozilla</li>
+<li>Persona, Salesforce, Google, Android, Windows Azure, Amazon Web</li>
+<li>Services, and numerous others</li>
+<li>Fragment identifier considerations: n/a</li>
+<li>Additional information:
+  Magic number(s): n/a
+  File extension(s): n/a
+  Macintosh file type code(s): n/a</li>
+<li>Person &amp; email address to contact for further information:
+Michael Prorock, mprorock@mesur.io</li>
+<li>Intended usage: COMMON</li>
+<li>Restrictions on usage: none</li>
+<li>Author: Michael Prorock, mprorock@mesur.io</li>
+<li>Change controller: IESG</li>
+<li>Provisional registration?  Yes</li>
+</ul>
+</section>
+</section>
+
+</middle>
+
+<back>
+<references><name>Normative References</name>
+<xi:include href="https://xml2rfc.ietf.org/public/rfc/bibxml/reference.RFC.2046.xml"/>
+<xi:include href="https://xml2rfc.ietf.org/public/rfc/bibxml/reference.RFC.2119.xml"/>
+<xi:include href="https://xml2rfc.ietf.org/public/rfc/bibxml/reference.RFC.6838.xml"/>
+<xi:include href="https://xml2rfc.ietf.org/public/rfc/bibxml/reference.RFC.7519.xml"/>
+<xi:include href="https://xml2rfc.ietf.org/public/rfc/bibxml/reference.RFC.8259.xml"/>
+</references>
+
+</back>
+
+</rfc>
