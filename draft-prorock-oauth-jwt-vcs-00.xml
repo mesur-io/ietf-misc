@@ -1,0 +1,862 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- name="GENERATOR" content="github.com/mmarkdown/mmark Mmark Markdown Processor - mmark.miek.nl" -->
+<rfc version="3" ipr="trust200902" docName="draft-prorock-oauth-jwt-vcs-00" submissionType="IETF" category="std" xml:lang="en" xmlns:xi="http://www.w3.org/2001/XInclude" indexInclude="true" consensus="true">
+
+<front>
+<title abbrev="jwt-vcs">Native JWT Representation of Verifiable Credentials</title><seriesInfo value="draft-prorock-oauth-jwt-vcs-00" stream="IETF" status="standard" name="Internet-Draft"></seriesInfo>
+<author initials="D." surname="Fett" fullname="Daniel Fett"><organization>Authlete Inc. </organization><address><postal><street></street>
+</postal><email>mail@danielfett.de</email>
+</address></author><author initials="M." surname="Prorock" fullname="Michael Prorock"><organization>mesur.io</organization><address><postal><street></street>
+</postal><email>mprorock@mesur.io</email>
+</address></author><author initials="O." surname="Steele" fullname="Orie Steele"><organization>Transmute</organization><address><postal><street></street>
+</postal><email>orie@transmute.industries</email>
+</address></author><author initials="O." surname="Terbu" fullname="Oliver Terbu"><organization>Spruce Systems, Inc.</organization><address><postal><street></street>
+</postal><email>oliver.terbu@spruceid.com</email>
+</address></author><date/>
+<area>Internet</area>
+<workgroup>None</workgroup>
+<keyword>JOSE</keyword>
+<keyword>COSE</keyword>
+<keyword>JWT</keyword>
+<keyword>CWT</keyword>
+
+<abstract>
+<t>This document describes how to construct and utilize
+a JWT as a Verifiable Credential utilizing only JSON
+and registered claims. This document also covers use
+of SD-JWTs as a verifiable Credentials.</t>
+<t>This document does not define any new cryptography,
+only seralizations of systems.</t>
+</abstract>
+
+</front>
+
+<middle>
+
+<section anchor="notational-conventions"><name>Notational Conventions</name>
+<t>The key words &quot;<bcp14>MUST</bcp14>&quot;, &quot;<bcp14>MUST NOT</bcp14>&quot;, &quot;<bcp14>REQUIRED</bcp14>&quot;, &quot;<bcp14>SHALL</bcp14>&quot;, &quot;<bcp14>SHALL NOT</bcp14>&quot;, &quot;<bcp14>SHOULD</bcp14>&quot;,
+&quot;<bcp14>SHOULD NOT</bcp14>&quot;, &quot;<bcp14>RECOMMENDED</bcp14>&quot;, &quot;<bcp14>MAY</bcp14>&quot;, and &quot;<bcp14>OPTIONAL</bcp14>&quot; in this
+document are to be interpreted as described in <xref target="RFC2119"></xref>.</t>
+</section>
+
+<section anchor="terminology"><name>Terminology</name>
+<t>The following terminology is used throughout this document:</t>
+<t>This specification uses the terms &quot;Holder&quot;, &quot;Issuer&quot;, &quot;Verifier&quot;,
+defined by <xref target="I-D.ietf-oauth-selective-disclosure-jwt"></xref>.</t>
+
+<dl spacing="compact">
+<dt>signature</dt>
+<dd>The digital signature output.</dd>
+<dt>Verifiable Credential (VC):</dt>
+<dd>An Issuer-signed assertion with claims about a Subject.</dd>
+<dt>SD-JWT-based Verifiable Credential (SD-JWT VC):</dt>
+<dd>A Verifiable Credential encoded using the Issuance format defined in
+<xref target="I-D.ietf-oauth-selective-disclosure-jwt"></xref>.</dd>
+<dt>Unsecured payload of an SD-JWT VC:</dt>
+<dd>A JSON object containing all selectively disclosable and
+non-selectively disclosable claims of the SD-JWT VC. The unsecured
+payload acts as the input JSON object to issue an SD-JWT VC complying to
+this specification.</dd>
+<dt>Status Provider:</dt>
+<dd>An entity that provides status information (e.g. revocation) about a
+Verifiable Credential.</dd>
+</dl>
+</section>
+
+<section anchor="scope"><name>Scope</name>
+
+<ul spacing="compact">
+<li><t>This specification defines</t>
+
+<ul spacing="compact">
+<li>Data model and media types for Verifiable Credentials based on JWTs
+and SD-JWTs.</li>
+<li>Validation and processing rules for Verifiers and Holders.</li>
+</ul></li>
+</ul>
+</section>
+
+<section anchor="introduction"><name>Introduction</name>
+
+<section anchor="three-party-model"><name>Three-Party-Model</name>
+<t>In the so-called Three-Party-Model, Issuers issue Verifiable Credentials to a
+Holder, who can then present the Verifiable Credentials to Verifiers. Verifiable
+Credentials are cryptographically signed statements about a Subject, typically the Holder.</t>
+
+<sourcecode type="ascii-art">         +------------+
+         |            |
+         |   Issuer   |
+         |            |
+         +------------+
+               |
+    Issues Verifiable Credential
+               |
+               v
+         +------------+
+         |            |
+         |   Holder   |
+         |            |
+         +------------+
+               |
+  Presents Verifiable Credential
+               |
+               v
+         +-------------+
+         |             |+                          +------------+
+         |  Verifiers  ||+                         |   Status   |
+         |             |||----- optionally -------&gt;|  Provider  |
+         +-------------+||   retrieve status of    |            |
+          +-------------+|  Verifiable Credential  +------------+
+           +-------------+
+</sourcecode>
+<t>Figure: Three-Party-Model with optional Status Provider</t>
+<t>Verifiers can check the authenticity of the data in the Verifiable
+Credentials and optionally enforce Holder Binding, i.e., ask the Holder
+to prove that they are the intended holder of the Verifiable Credential,
+for example, by proving possession of a cryptographic key referenced in
+the credential. This process is further described in
+<xref target="I-D.ietf-oauth-selective-disclosure-jwt"></xref>.</t>
+<t>To support revocation of Verifiable Credentials, an optional fourth
+party can be involved, a Status Provider, who delivers revocation
+information to Verifiers. (The Verifier can also serve as the Status
+Provider.)</t>
+<t>This specification defines Verifiable Credentials based on the SD-JWT
+format with a JWT Claim Set.</t>
+</section>
+
+<section anchor="rationale"><name>Rationale</name>
+<t>JSON Web Tokens (JWTs) <xref target="RFC7519"></xref> can in principle be used to express
+Verifiable Credentials in a way that is easy to understand and process
+as it builds upon established web primitives. While JWT-based
+credentials enable selective disclosure, i.e., the ability for a Holder
+to disclose only a subset of the contained claims, in an Identity
+Provider ecosystem by issuing new JWTs to the Verifier for every
+presentation, this approach does not work in the three-party-model.</t>
+<t>Selective Disclosure JWT (SD-JWT)
+<xref target="I-D.ietf-oauth-selective-disclosure-jwt"></xref> is a specification that
+introduces conventions to support selective disclosure for JWTs: For an
+SD-JWT document, a Holder can decide which claims to release (within
+bounds defined by the Issuer). This format is therefore perfectly suited
+for Verifiable Credentials.</t>
+<t>SD-JWT itself does not define the claims that must be used within the
+payload or their semantics. This specification therefore defines how
+Verifiable Credentials can be expressed using SD-JWT.</t>
+<t>JWTs (and SD-JWTs) can contain claims that are registered in &quot;JSON Web
+Token Claims&quot; registry as defined in <xref target="RFC7519"></xref>, as well as public and
+private claims. Private claims are not relevant for this specification
+due to the openness of the three-party-model. Since SD-JWTs are based on
+JWTs, this specification aims to express the basic Verifiable Credential
+data model purely through JWT Claim Sets, using registered claims while
+allowing Issuers to use additional registered claims, as well as new or
+existing public claims, to make statements about the Subject of the
+Verifiable Credential.</t>
+</section>
+</section>
+
+<section anchor="native-jwt-representation-of-verifiable-credentials"><name>Native JWT Representation of Verifiable Credentials</name>
+
+<section anchor="overview"><name>Overview</name>
+<t>This section provides guidance on how to use JSON <xref target="RFC8259"></xref> claimsets
+with JWT <xref target="RFC7519"></xref> registered claims to construct a JWT that can be
+mapped to a verifiable credential. This section also describes how to
+use content types and token types to distinguish different
+representations of verifiable credentials.</t>
+<t>This representation relies on claims registered in the <eref target="https://www.iana.org/assignments/jwt/jwt.xhtml#claims">IANA JSON Web
+Token Claims
+Registry</eref>
+whenever possible.</t>
+<t>Implementers using this representation SHOULD NOT use <tt>vc+ld+json</tt> as an
+input.</t>
+
+<section anchor="credential-header"><name>Credential Header</name>
+<t><tt>typ</tt> MUST use the media type <tt>vc+jwt</tt>.</t>
+<t>Example of credential metadata (decoded JWT header):</t>
+
+<sourcecode type="json">{
+  &quot;kid&quot;: &quot;https://example.edu/issuers/14#key-0&quot;,
+  &quot;alg&quot;: &quot;ES256&quot;,
+  &quot;typ&quot;: &quot;vc+jwt&quot;
+}
+</sourcecode>
+</section>
+
+<section anchor="credential"><name>Credential</name>
+<t>Example of a credential (decoded JWT payload):</t>
+
+<sourcecode type="json">{ 
+  &quot;iss&quot;: &quot;https://example.edu/issuers/14&quot;,
+  &quot;sub&quot;: &quot;1234567890&quot;,
+  &quot;name&quot;: &quot;John Doe&quot;,
+  &quot;iat&quot;: 1516239022,
+  &quot;urn:example:claim&quot;: true
+}
+</sourcecode>
+<t>NOTE: The <tt>vc</tt> and <tt>vp</tt> claims MUST NOT be present when the content
+type header parameter is set to <tt>credential-claims-set+json</tt>.</t>
+</section>
+
+<section anchor="verifiable-credential"><name>Verifiable Credential</name>
+<t>Example of an JWT encoded verifiable credential (using external proof):</t>
+
+<sourcecode type="json">=============== NOTE: '\' line wrapping per RFC 8792 ================
+eyJraWQiOiJodHRwczovL2V4YW1wbGUuZWR1L2lzc3VlcnMvMTQja2V5LTAiLCJhbGci\
+OiJFUzI1NiIsInR5cCI6InZjK2p3dCJ9.eyJpc3MiOiJodHRwczovL2V4YW1wbGUuZWR\
+1L2lzc3VlcnMvMTQiLCJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiw\
+iaWF0IjoxNTE2MjM5MDIyLCJ1cm46ZXhhbXBsZTpjbGFpbSI6dHJ1ZX0.WLD4Qxh629T\
+FkJHzmbkWEefYX-QPkdCmxbBMKNHErxND2QpjVBbatxHkxS9Y_SzBmwffuM2E9i5VvVg\
+pZ6v4Tg
+</sourcecode>
+</section>
+</section>
+</section>
+
+<section anchor="verifiable-credentials-based-on-sd-jwt"><name>Verifiable Credentials based on SD-JWT</name>
+<t>This section defines encoding, validation and processing rules for SD-JWT VCs.</t>
+
+<section anchor="media-type"><name>Media Type</name>
+<t>SD-JWT VCs compliant with this specification MUST use the media type
+<tt>application/vc+sd-jwt</tt> as defined in <xref target="application-vc-sd-jwt"></xref>.</t>
+</section>
+
+<section anchor="data-format"><name>Data Format</name>
+<t>SD-JWT VCs MUST be encoded using the SD-JWT Combined Format for Issuance as
+defined in Section 5.3. of <xref target="I-D.ietf-oauth-selective-disclosure-jwt"></xref>.</t>
+<t>SD-JWT VCs MUST contain all Disclosures corresponding to their SD-JWT component
+except for Decoy Digests as per Section 5.1.1.3. of <xref target="I-D.ietf-oauth-selective-disclosure-jwt"></xref>.</t>
+
+<section anchor="header-parameters"><name>Header Parameters</name>
+<t>This section defines JWT header parameters for the SD-JWT component of the
+SD-JWT VC.</t>
+<t>The <tt>typ</tt> header parameter of the SD-JWT MUST be present. The <tt>typ</tt> value MUST
+use <tt>vc+sd-jwt</tt>. This indicates that the payload of the SD-JWT contains plain
+JSON and follows the rules as defined in this specification. It further
+indicates that the SD-JWT is a SD-JWT component of a SD-JWT VC.</t>
+<t>The following is a non-normative example of a decoded SD-JWT header:</t>
+
+<artwork>{
+  &quot;alg&quot;: &quot;ES256&quot;,
+  &quot;typ&quot;: &quot;vc+sd-jwt&quot;
+}
+</artwork>
+</section>
+
+<section anchor="claims"><name>Claims</name>
+<t>This section defines the claims that can be included in the payload of
+SD-JWT VCs.</t>
+
+<section anchor="type-claim"><name><tt>type</tt> claim</name>
+<t>This specification defines the JWT claim <tt>type</tt>. The <tt>type</tt> claim is used
+to express the type of the JSON object that is secured by the
+JWT. The <tt>type</tt> value MUST be a case-sensitive <tt>StringOrURI</tt> value.</t>
+<t>The following is a non-normative example of how <tt>type</tt> is used to express
+a type:</t>
+
+<artwork>{
+  &quot;type&quot;: &quot;SomeType&quot;
+}
+</artwork>
+</section>
+
+<section anchor="registered-jwt-claims"><name>Registered JWT Claims</name>
+<t>SD-JWT VCs MAY use any claim registered in the &quot;JSON Web Token Claims&quot;
+registry as defined in <xref target="RFC7519"></xref>.</t>
+<t>If present, the following registered JWT claims MUST be included in the SD-JWT
+and MUST NOT be included in the Disclosures, i.e. cannot be selectively
+disclosed:</t>
+
+<ul spacing="compact">
+<li><t><tt>iss</tt></t>
+
+<ul spacing="compact">
+<li>REQUIRED. The Issuer of the Verifiable Credential. The value of <tt>iss</tt>
+MUST be a URI. See <xref target="RFC7519"></xref> for more information.</li>
+</ul></li>
+<li><t><tt>iat</tt></t>
+
+<ul spacing="compact">
+<li>REQUIRED. The time of issuance of the Verifiable Credential. See
+<xref target="RFC7519"></xref> for more information.</li>
+</ul></li>
+<li><t><tt>nbf</tt></t>
+
+<ul spacing="compact">
+<li>OPTIONAL. The time before which the Verifiable Credential MUST NOT be
+accepted before validating. See <xref target="RFC7519"></xref> for more information.</li>
+</ul></li>
+<li><t><tt>exp</tt></t>
+
+<ul spacing="compact">
+<li>OPTIONAL. The expiry time of the Verifiable Credential after which the
+Verifiable Credential is no longer valid. See <xref target="RFC7519"></xref> for more
+information.</li>
+</ul></li>
+<li><t><tt>cnf</tt></t>
+
+<ul spacing="compact">
+<li>REQUIRED when Cryptographic Holder Binding is to be supported. Contains the confirmation method as defined in <xref target="RFC7800"></xref>. It SHOULD contain a JWK as defined in Section 3.2 of <xref target="RFC7800"></xref> and in this case, the <tt>kid</tt> (Key ID) member MUST be present in the JWK.  For Cryptographic Holder Binding, the Holder Binding JWT in the Combined Format for Presentation MUST be signed by the key identified in this claim.</li>
+</ul></li>
+<li><t><tt>type</tt></t>
+
+<ul spacing="compact">
+<li>REQUIRED. The type of the Verifiable Credential, e.g.,
+<tt>IdentityCredential</tt>, as defined in <xref target="type-claim"></xref>.</li>
+</ul></li>
+<li><t><tt>status</tt></t>
+
+<ul spacing="compact">
+<li>OPTIONAL. The information on how to read the status of the Verifiable
+Credential. See [TBD] for more information.</li>
+</ul></li>
+</ul>
+<t>The following registered JWT claims MAY be contained in the SD-JWT or in the
+Disclosures and MAY be selectively disclosed:</t>
+
+<ul spacing="compact">
+<li><t><tt>sub</tt></t>
+
+<ul spacing="compact">
+<li>OPTIONAL. The identifier of the Subject of the Verifiable Credential.
+The value of <tt>sub</tt> MUST be a URI. The Issuer MAY use it to provide the Subject
+identifier known by the Issuer. There is no requirement for a binding to
+exist between <tt>sub</tt> and <tt>cnf</tt> claims.</li>
+</ul></li>
+</ul>
+</section>
+
+<section anchor="public-jwt-claims"><name>Public JWT claims</name>
+<t>Additional public claims MAY be used in SD-JWT VCs depending on the
+application.</t>
+</section>
+</section>
+</section>
+
+<section anchor="example"><name>Example</name>
+<t>The following is a non-normative example of an unsecured payload of an
+SD-JWT VC.</t>
+
+<artwork>{
+  &quot;type&quot;: &quot;IdentityCredential&quot;,
+  &quot;given_name&quot;: &quot;John&quot;,
+  &quot;family_name&quot;: &quot;Doe&quot;,
+  &quot;email&quot;: &quot;johndoe@example.com&quot;,
+  &quot;phone_number&quot;: &quot;+1-202-555-0101&quot;,
+  &quot;address&quot;: {
+    &quot;street_address&quot;: &quot;123 Main St&quot;,
+    &quot;locality&quot;: &quot;Anytown&quot;,
+    &quot;region&quot;: &quot;Anystate&quot;,
+    &quot;country&quot;: &quot;US&quot;
+  },
+  &quot;birthdate&quot;: &quot;1940-01-01&quot;,
+  &quot;is_over_18&quot;: true,
+  &quot;is_over_21&quot;: true,
+  &quot;is_over_65&quot;: true
+}
+</artwork>
+<t>The following is a non-normative example of how the unsecured payload of the
+SD-JWT VC above can be used in a SD-JWT where the resulting SD-JWT VC contains
+only claims about the Subject that are selectively disclosable:</t>
+
+<artwork>{
+  &quot;_sd&quot;: [
+    &quot;09vKrJMOlyTWM0sjpu_pdOBVBQ2M1y3KhpH515nXkpY&quot;,
+    &quot;2rsjGbaC0ky8mT0pJrPioWTq0_daw1sX76poUlgCwbI&quot;,
+    &quot;EkO8dhW0dHEJbvUHlE_VCeuC9uRELOieLZhh7XbUTtA&quot;,
+    &quot;IlDzIKeiZdDwpqpK6ZfbyphFvz5FgnWa-sN6wqQXCiw&quot;,
+    &quot;JzYjH4svliH0R3PyEMfeZu6Jt69u5qehZo7F7EPYlSE&quot;,
+    &quot;PorFbpKuVu6xymJagvkFsFXAbRoc2JGlAUA2BA4o7cI&quot;,
+    &quot;TGf4oLbgwd5JQaHyKVQZU9UdGE0w5rtDsrZzfUaomLo&quot;,
+    &quot;jdrTE8YcbY4EifugihiAe_BPekxJQZICeiUQwY9QqxI&quot;,
+    &quot;jsu9yVulwQQlhFlM_3JlzMaSFzglhQG0DpfayQwLUK4&quot;
+  ],
+  &quot;iss&quot;: &quot;https://example.com/issuer&quot;,
+  &quot;iat&quot;: 1683000000,
+  &quot;exp&quot;: 1883000000,
+  &quot;type&quot;: &quot;IdentityCredential&quot;,
+  &quot;_sd_alg&quot;: &quot;sha-256&quot;,
+  &quot;cnf&quot;: {
+    &quot;jwk&quot;: {
+      &quot;kty&quot;: &quot;EC&quot;,
+      &quot;crv&quot;: &quot;P-256&quot;,
+      &quot;x&quot;: &quot;TCAER19Zvu3OHF4j4W4vfSVoHIP1ILilDls7vCeGemc&quot;,
+      &quot;y&quot;: &quot;ZxjiWWbZMQGHVWKVQ4hbSIirsVfuecCE6t4jT9F2HZQ&quot;
+    }
+  }
+}
+</artwork>
+<t>Note that a <tt>cnf</tt> claim has been added to the SD-JWT payload to express the
+confirmation method of the holder binding.</t>
+<t>The following are the Disclosures belonging to the SD-JWT payload above:</t>
+<t>Claim given_name:</t>
+
+<ul spacing="compact">
+<li>SHA-256 Hash: jsu9yVulwQQlhFlM_3JlzMaSFzglhQG0DpfayQwLUK4</li>
+<li>Disclosure:
+WyIyR0xDNDJzS1F2ZUNmR2ZyeU5STjl3IiwgImdpdmVuX25hbWUiLCAiSm9obiJd</li>
+<li>Contents: [&quot;2GLC42sKQveCfGfryNRN9w&quot;, &quot;given_name&quot;, &quot;John&quot;]</li>
+</ul>
+<t>Claim family_name:</t>
+
+<ul spacing="compact">
+<li>SHA-256 Hash: TGf4oLbgwd5JQaHyKVQZU9UdGE0w5rtDsrZzfUaomLo</li>
+<li>Disclosure:
+WyJlbHVWNU9nM2dTTklJOEVZbnN4QV9BIiwgImZhbWlseV9uYW1lIiwgIkRvZSJd</li>
+<li>Contents: [&quot;eluV5Og3gSNII8EYnsxA_A&quot;, &quot;family_name&quot;, &quot;Doe&quot;]</li>
+</ul>
+<t>Claim email:</t>
+
+<ul spacing="compact">
+<li>SHA-256 Hash: JzYjH4svliH0R3PyEMfeZu6Jt69u5qehZo7F7EPYlSE</li>
+<li>Disclosure:
+WyI2SWo3dE0tYTVpVlBHYm9TNXRtdlZBIiwgImVtYWlsIiwgImpvaG5kb2VA
+ZXhhbXBsZS5jb20iXQ</li>
+<li>Contents: [&quot;6Ij7tM-a5iVPGboS5tmvVA&quot;, &quot;email&quot;, &quot;johndoe@example.com&quot;]</li>
+</ul>
+<t>Claim phone_number:</t>
+
+<ul spacing="compact">
+<li>SHA-256 Hash: PorFbpKuVu6xymJagvkFsFXAbRoc2JGlAUA2BA4o7cI</li>
+<li>Disclosure:
+WyJlSThaV205UW5LUHBOUGVOZW5IZGhRIiwgInBob25lX251bWJlciIsICIr
+MS0yMDItNTU1LTAxMDEiXQ</li>
+<li>Contents: [&quot;eI8ZWm9QnKPpNPeNenHdhQ&quot;, &quot;phone_number&quot;,
+&quot;+1-202-555-0101&quot;]</li>
+</ul>
+<t>Claim address:</t>
+
+<ul spacing="compact">
+<li>SHA-256 Hash: IlDzIKeiZdDwpqpK6ZfbyphFvz5FgnWa-sN6wqQXCiw</li>
+<li>Disclosure:
+WyJRZ19PNjR6cUF4ZTQxMmExMDhpcm9BIiwgImFkZHJlc3MiLCB7InN0cmVl
+dF9hZGRyZXNzIjogIjEyMyBNYWluIFN0IiwgImxvY2FsaXR5IjogIkFueXRv
+d24iLCAicmVnaW9uIjogIkFueXN0YXRlIiwgImNvdW50cnkiOiAiVVMifV0</li>
+<li>Contents: [&quot;Qg_O64zqAxe412a108iroA&quot;, &quot;address&quot;, {&quot;street_address&quot;:
+&quot;123 Main St&quot;, &quot;locality&quot;: &quot;Anytown&quot;, &quot;region&quot;: &quot;Anystate&quot;, &quot;country&quot;:
+&quot;US&quot;}]</li>
+</ul>
+<t>Claim birthdate:</t>
+
+<ul spacing="compact">
+<li>SHA-256 Hash: jdrTE8YcbY4EifugihiAe_BPekxJQZICeiUQwY9QqxI</li>
+<li>Disclosure:
+WyJBSngtMDk1VlBycFR0TjRRTU9xUk9BIiwgImJpcnRoZGF0ZSIsICIxOTQwLTAxLTAxIl0</li>
+<li>Contents: [&quot;AJx-095VPrpTtN4QMOqROA&quot;, &quot;birthdate&quot;, &quot;1940-01-01&quot;]</li>
+</ul>
+<t>Claim is_over_18:</t>
+
+<ul spacing="compact">
+<li>SHA-256 Hash: 09vKrJMOlyTWM0sjpu_pdOBVBQ2M1y3KhpH515nXkpY</li>
+<li>Disclosure:
+WyJQYzMzSk0yTGNoY1VfbEhnZ3ZfdWZRIiwgImlzX292ZXJfMTgiLCB0cnVlXQ</li>
+<li>Contents: [&quot;Pc33JM2LchcU_lHggv_ufQ&quot;, &quot;is_over_18&quot;, true]</li>
+</ul>
+<t>Claim is_over_21:</t>
+
+<ul spacing="compact">
+<li>SHA-256 Hash: 2rsjGbaC0ky8mT0pJrPioWTq0_daw1sX76poUlgCwbI</li>
+<li>Disclosure:
+WyJHMDJOU3JRZmpGWFE3SW8wOXN5YWpBIiwgImlzX292ZXJfMjEiLCB0cnVlXQ</li>
+<li>Contents: [&quot;G02NSrQfjFXQ7Io09syajA&quot;, &quot;is_over_21&quot;, true]</li>
+</ul>
+<t>Claim is_over_65:</t>
+
+<ul spacing="compact">
+<li>SHA-256 Hash: EkO8dhW0dHEJbvUHlE_VCeuC9uRELOieLZhh7XbUTtA</li>
+<li>Disclosure:
+WyJsa2x4RjVqTVlsR1RQVW92TU5JdkNBIiwgImlzX292ZXJfNjUiLCB0cnVlXQ</li>
+<li>Contents: [&quot;lklxF5jMYlGTPUovMNIvCA&quot;, &quot;is_over_65&quot;, true]</li>
+</ul>
+<t>The SD-JWT and the Disclosures would then be serialized by the Issuer into the following format for issuance to the Holder:</t>
+
+<artwork>eyJhbGciOiAiRVMyNTYifQ.eyJfc2QiOiBbIjA5dktySk1PbHlUV00wc2pwdV9wZE9CV
+kJRMk0xeTNLaHBINTE1blhrcFkiLCAiMnJzakdiYUMwa3k4bVQwcEpyUGlvV1RxMF9kY
+Xcxc1g3NnBvVWxnQ3diSSIsICJFa084ZGhXMGRIRUpidlVIbEVfVkNldUM5dVJFTE9pZ
+UxaaGg3WGJVVHRBIiwgIklsRHpJS2VpWmREd3BxcEs2WmZieXBoRnZ6NUZnbldhLXNON
+ndxUVhDaXciLCAiSnpZakg0c3ZsaUgwUjNQeUVNZmVadTZKdDY5dTVxZWhabzdGN0VQW
+WxTRSIsICJQb3JGYnBLdVZ1Nnh5bUphZ3ZrRnNGWEFiUm9jMkpHbEFVQTJCQTRvN2NJI
+iwgIlRHZjRvTGJnd2Q1SlFhSHlLVlFaVTlVZEdFMHc1cnREc3JaemZVYW9tTG8iLCAia
+mRyVEU4WWNiWTRFaWZ1Z2loaUFlX0JQZWt4SlFaSUNlaVVRd1k5UXF4SSIsICJqc3U5e
+VZ1bHdRUWxoRmxNXzNKbHpNYVNGemdsaFFHMERwZmF5UXdMVUs0Il0sICJpc3MiOiAia
+HR0cHM6Ly9leGFtcGxlLmNvbS9pc3N1ZXIiLCAiaWF0IjogMTY4MzAwMDAwMCwgImV4c
+CI6IDE4ODMwMDAwMDAsICJ0eXBlIjogIklkZW50aXR5Q3JlZGVudGlhbCIsICJfc2RfY
+WxnIjogInNoYS0yNTYiLCAiY25mIjogeyJqd2siOiB7Imt0eSI6ICJFQyIsICJjcnYiO
+iAiUC0yNTYiLCAieCI6ICJUQ0FFUjE5WnZ1M09IRjRqNFc0dmZTVm9ISVAxSUxpbERsc
+zd2Q2VHZW1jIiwgInkiOiAiWnhqaVdXYlpNUUdIVldLVlE0aGJTSWlyc1ZmdWVjQ0U2d
+DRqVDlGMkhaUSJ9fX0.7-uYweCWRwFrKmcv1sqd3HFMd5Tn1PcytgarFfO7k-L0uSo-M
+WXmU-RjekKFblomzevP-6w8rNZ2sIo7f5D7fw~WyIyR0xDNDJzS1F2ZUNmR2ZyeU5STj
+l3IiwgImdpdmVuX25hbWUiLCAiSm9obiJd~WyJlbHVWNU9nM2dTTklJOEVZbnN4QV9BI
+iwgImZhbWlseV9uYW1lIiwgIkRvZSJd~WyI2SWo3dE0tYTVpVlBHYm9TNXRtdlZBIiwg
+ImVtYWlsIiwgImpvaG5kb2VAZXhhbXBsZS5jb20iXQ~WyJlSThaV205UW5LUHBOUGVOZ
+W5IZGhRIiwgInBob25lX251bWJlciIsICIrMS0yMDItNTU1LTAxMDEiXQ~WyJRZ19PNj
+R6cUF4ZTQxMmExMDhpcm9BIiwgImFkZHJlc3MiLCB7InN0cmVldF9hZGRyZXNzIjogIj
+EyMyBNYWluIFN0IiwgImxvY2FsaXR5IjogIkFueXRvd24iLCAicmVnaW9uIjogIkFueX
+N0YXRlIiwgImNvdW50cnkiOiAiVVMifV0~WyJBSngtMDk1VlBycFR0TjRRTU9xUk9BIi
+wgImJpcnRoZGF0ZSIsICIxOTQwLTAxLTAxIl0~WyJQYzMzSk0yTGNoY1VfbEhnZ3ZfdW
+ZRIiwgImlzX292ZXJfMTgiLCB0cnVlXQ~WyJHMDJOU3JRZmpGWFE3SW8wOXN5YWpBIiw
+gImlzX292ZXJfMjEiLCB0cnVlXQ~WyJsa2x4RjVqTVlsR1RQVW92TU5JdkNBIiwgImlz
+X292ZXJfNjUiLCB0cnVlXQ
+</artwork>
+</section>
+
+<section anchor="vc-sd-jwt-verification-and-processing"><name>Verification and Processing</name>
+<t>The recipient of the SD-JWT VC MUST process and verify an SD-JWT VC as
+follows:</t>
+
+<ol spacing="compact">
+<li>REQUIRED. Process and verify the SD-JWT as defined in
+Section 6. of <xref target="I-D.ietf-oauth-selective-disclosure-jwt"></xref>. For the
+verification, the <tt>iss</tt> claim in the SD-JWT MAY be used to retrieve the public
+key from the JWT Issuer Metadata configuration (as defined in
+<xref target="jwt-issuer-metadata"></xref>) of the SD-JWT VC issuer. A Verifier MAY use alternative
+methods to obtain the public key to verify the signature of the SD-JWT.</li>
+<li>OPTIONAL. If <tt>status</tt> is present in the verified payload of the SD-JWT,
+the status SHOULD be checked. It depends on the Verifier policy to reject or
+accept a presentation of a SD-JWT VC based on the status of the Verifiable
+Credential.</li>
+</ol>
+<t>Any claims used that are not understood MUST be ignored.</t>
+<t>Additional validation rules MAY apply, but their use is out of the scope of
+this specification.</t>
+</section>
+</section>
+
+<section anchor="jwt-issuer-metadata"><name>JWT Issuer Metadata</name>
+<t>This specification defines the JWT Issuer Metadata to retrieve the JWT Issuer
+Metadata configuration of the JWT Issuer of the JWT. The JWT Issuer is
+identified by the <tt>iss</tt> claim in the JWT. Use of the JWT Issuer Metadata
+is OPTIONAL.</t>
+<t>JWT Issuers publishing JWT Issuer Metadata MUST make a JWT Issuer Metadata
+configuration available at the path formed by concatenating the string
+<tt>/.well-known/jwt-issuer</tt> to the <tt>iss</tt> claim value in the JWT. The <tt>iss</tt> MUST
+be a case-sensitive URL using the HTTPS scheme that contains scheme, host and,
+optionally, port number and path components, but no query or fragment
+components.</t>
+
+<section anchor="jwt-issuer-metadata-request"><name>JWT Issuer Metadata Request</name>
+<t>A JWT Issuer Metadata configuration MUST be queried using an HTTP <tt>GET</tt> request
+at the path defined in <xref target="jwt-issuer-metadata"></xref>.</t>
+<t>The following is a non-normative example of a HTTP request for the JWT Issuer
+Metadata configuration when <tt>iss</tt> is set to <tt>https://example.com</tt>:</t>
+
+<artwork>GET /.well-known/jwt-issuer HTTP/1.1
+Host: example.com
+</artwork>
+<t>If the <tt>iss</tt> value contains a path component, any terminating <tt>/</tt> MUST be
+removed before inserting <tt>/.well-known/</tt> and the well-known URI suffix
+between the host component and the path component.</t>
+<t>The following is a non-normative example of a HTTP request for the JWT Issuer
+Metadata configuration when <tt>iss</tt> is set to <tt>https://example.com/user/1234</tt>:</t>
+
+<artwork>GET /.well-known/jwt-issuer/user/1234 HTTP/1.1
+Host: example.com
+</artwork>
+</section>
+
+<section anchor="jwt-issuer-metadata-response"><name>JWT Issuer Metadata Response</name>
+<t>A successful response MUST use the <tt>200 OK HTTP</tt> and return the JWT Issuer
+Metadata configuration using the <tt>application/json</tt> content type.</t>
+<t>An error response uses the applicable HTTP status code value.</t>
+<t>This specification defines the following JWT Issuer Metadata configuration
+parameters:</t>
+
+<ul spacing="compact">
+<li><tt>issuer</tt>
+  REQUIRED. The JWT Issuer identifier, which MUST be identical to the <tt>iss</tt>
+value in the JWT.</li>
+<li><t><tt>jwks_uri</tt></t>
+
+<ul spacing="compact">
+<li>OPTIONAL. URL string referencing the JWT Issuer's JSON Web Key (JWK) Set
+<xref target="RFC7517"></xref> document which contains the JWT Issuer's public keys. The value of
+this field MUST point to a valid JWK Set document. Use of this parameter is
+RECOMMENDED, as it allows for easy key rotation.</li>
+</ul></li>
+<li><t><tt>jwks</tt></t>
+
+<ul spacing="compact">
+<li>OPTIONAL. JWT Issuer's JSON Web Key Set <xref target="RFC7517"></xref> document value, which
+contains the JWT Issuer's public keys. The value of this field MUST be a JSON
+object containing a valid JWK Set. This parameter is intended to be used by JWT
+Issuer that cannot use the <tt>jwks_uri</tt> parameter.</li>
+</ul></li>
+</ul>
+<t>JWT Issuer Metadata MUST include either <tt>jwks_uri</tt> or <tt>jwks</tt> in their JWT
+Issuer Metadata, but not both.</t>
+<t>It is RECOMMENDED that the JWT contains a <tt>kid</tt> JWT header parameter that can
+be used to lookup the public key in the JWK Set included by value or referenced
+in the JWT Issuer Metadata.</t>
+<t>The following is a non-normative example of a JWT Issuer Metadata configuration
+including <tt>jwks</tt>:</t>
+
+<artwork>{
+   &quot;issuer&quot;:&quot;https://example.com&quot;,
+   &quot;jwks&quot;:{
+      &quot;keys&quot;:[
+         {
+            &quot;kid&quot;:&quot;doc-signer-05-25-2022&quot;,
+            &quot;e&quot;:&quot;AQAB&quot;,
+            &quot;n&quot;:&quot;nj3YJwsLUFl9BmpAbkOswCNVx17Eh9wMO-_AReZwBqfaWFcfG
+   HrZXsIV2VMCNVNU8Tpb4obUaSXcRcQ-VMsfQPJm9IzgtRdAY8NN8Xb7PEcYyk
+   lBjvTtuPbpzIaqyiUepzUXNDFuAOOkrIol3WmflPUUgMKULBN0EUd1fpOD70p
+   RM0rlp_gg_WNUKoW1V-3keYUJoXH9NztEDm_D2MQXj9eGOJJ8yPgGL8PAZMLe
+   2R7jb9TxOCPDED7tY_TU4nFPlxptw59A42mldEmViXsKQt60s1SLboazxFKve
+   qXC_jpLUt22OC6GUG63p-REw-ZOr3r845z50wMuzifQrMI9bQ&quot;,
+            &quot;kty&quot;:&quot;RSA&quot;
+         }
+      ]
+   }
+}
+</artwork>
+<t>The following is a non-normative example of a JWT Issuer Metadata
+configuration including <tt>jwks_uri</tt>:</t>
+
+<artwork>{
+   &quot;issuer&quot;:&quot;https://example.com&quot;,
+   &quot;jwks_uri&quot;:&quot;https://jwt-issuer.example.org/my_public_keys.jwks&quot;
+}
+</artwork>
+<t>Additional JWT Issuer Metadata configuration parameters MAY also be used.</t>
+</section>
+
+<section anchor="jwt-issuer-metadata-validation"><name>JWT Issuer Metadata Validation</name>
+<t>The <tt>issuer</tt> value returned MUST be identical to the <tt>iss</tt> value of the JWT. If
+these values are not identical, the data contained in the response MUST NOT be
+used.</t>
+</section>
+</section>
+
+<section anchor="presenting-verifiable-credentials"><name>Presenting Verifiable Credentials</name>
+<t>This section defines encoding, validation and processing rules for presentations
+of SD-JWT VCs.</t>
+
+<section anchor="data-format-1"><name>Data Format</name>
+<t>A presentation of an SD-JWT VC MUST be encoded using the SD-JWT Combined
+Format for Presentation as defined in Section 5.4. of
+<xref target="I-D.ietf-oauth-selective-disclosure-jwt"></xref>.</t>
+<t>A presentation of an SD-JWT VC MAY contain a Holder Binding JWT as described in
+Section 5.4.1. of <xref target="I-D.ietf-oauth-selective-disclosure-jwt"></xref>.</t>
+
+<section anchor="holder-binding-jwt"><name>Holder Binding JWT</name>
+<t>If the presentation of the SD-JWT VC includes a Holder Binding JWT, the
+following claims are used within the Holder Binding JWT:</t>
+
+<ul spacing="compact">
+<li><t><tt>nonce</tt></t>
+
+<ul spacing="compact">
+<li>REQUIRED. String value used to associate a transaction between a Verifier
+an a Holder, and to mitigate replay attacks. The value is passed
+through unmodified from the Verifier to the Holder Binding JWT. Sufficient
+entropy MUST be present in the <tt>nonce</tt> values used to prevent attackers from
+guessing values.</li>
+</ul></li>
+<li><t><tt>aud</tt></t>
+
+<ul spacing="compact">
+<li>REQUIRED. The intended recipient of the Holder Binding JWT which is
+typically the Verifier. See <xref target="RFC7519"></xref> for more information.</li>
+</ul></li>
+<li><t><tt>iat</tt></t>
+
+<ul spacing="compact">
+<li>REQUIRED. The time of issuance of the Holder Binding JWT. See
+<xref target="RFC7519"></xref> for more information.</li>
+</ul></li>
+<li><t><tt>exp</tt></t>
+
+<ul spacing="compact">
+<li>OPTIONAL. The expiration time of the signature when
+the Holder Binding is no longer considered valid. See <xref target="RFC7519"></xref>
+for more information.</li>
+</ul></li>
+</ul>
+<t>The Holder Binding JWT MAY include addtional claims which when not understood
+MUST be ignored.</t>
+</section>
+</section>
+
+<section anchor="examples"><name>Examples</name>
+<t>The following is a non-normative example of a presentation of the SD-JWT shown
+above including a Holder Binding JWT:</t>
+
+<artwork>eyJhbGciOiAiRVMyNTYifQ.eyJfc2QiOiBbIjA5dktySk1PbHlUV00wc2pwdV9wZE9CV
+kJRMk0xeTNLaHBINTE1blhrcFkiLCAiMnJzakdiYUMwa3k4bVQwcEpyUGlvV1RxMF9kY
+Xcxc1g3NnBvVWxnQ3diSSIsICJFa084ZGhXMGRIRUpidlVIbEVfVkNldUM5dVJFTE9pZ
+UxaaGg3WGJVVHRBIiwgIklsRHpJS2VpWmREd3BxcEs2WmZieXBoRnZ6NUZnbldhLXNON
+ndxUVhDaXciLCAiSnpZakg0c3ZsaUgwUjNQeUVNZmVadTZKdDY5dTVxZWhabzdGN0VQW
+WxTRSIsICJQb3JGYnBLdVZ1Nnh5bUphZ3ZrRnNGWEFiUm9jMkpHbEFVQTJCQTRvN2NJI
+iwgIlRHZjRvTGJnd2Q1SlFhSHlLVlFaVTlVZEdFMHc1cnREc3JaemZVYW9tTG8iLCAia
+mRyVEU4WWNiWTRFaWZ1Z2loaUFlX0JQZWt4SlFaSUNlaVVRd1k5UXF4SSIsICJqc3U5e
+VZ1bHdRUWxoRmxNXzNKbHpNYVNGemdsaFFHMERwZmF5UXdMVUs0Il0sICJpc3MiOiAia
+HR0cHM6Ly9leGFtcGxlLmNvbS9pc3N1ZXIiLCAiaWF0IjogMTY4MzAwMDAwMCwgImV4c
+CI6IDE4ODMwMDAwMDAsICJ0eXBlIjogIklkZW50aXR5Q3JlZGVudGlhbCIsICJfc2RfY
+WxnIjogInNoYS0yNTYiLCAiY25mIjogeyJqd2siOiB7Imt0eSI6ICJFQyIsICJjcnYiO
+iAiUC0yNTYiLCAieCI6ICJUQ0FFUjE5WnZ1M09IRjRqNFc0dmZTVm9ISVAxSUxpbERsc
+zd2Q2VHZW1jIiwgInkiOiAiWnhqaVdXYlpNUUdIVldLVlE0aGJTSWlyc1ZmdWVjQ0U2d
+DRqVDlGMkhaUSJ9fX0.7-uYweCWRwFrKmcv1sqd3HFMd5Tn1PcytgarFfO7k-L0uSo-M
+WXmU-RjekKFblomzevP-6w8rNZ2sIo7f5D7fw~WyJRZ19PNjR6cUF4ZTQxMmExMDhpcm
+9BIiwgImFkZHJlc3MiLCB7InN0cmVldF9hZGRyZXNzIjogIjEyMyBNYWluIFN0IiwgIm
+xvY2FsaXR5IjogIkFueXRvd24iLCAicmVnaW9uIjogIkFueXN0YXRlIiwgImNvdW50cn
+kiOiAiVVMifV0~eyJhbGciOiAiRVMyNTYifQ.eyJub25jZSI6ICIxMjM0NTY3ODkwIiw
+gImF1ZCI6ICJodHRwczovL2V4YW1wbGUuY29tL3ZlcmlmaWVyIiwgImlhdCI6IDE2ODU
+xMDc0NjJ9.LJW9AJ-tnpfaurCo7iaiNI3s37hxz6o5n_RifTtVy1ukqhrQ9GMcKbBhTm
+RBhZI6FtQtV5EeuRFXUcDC3-gWeA
+</artwork>
+<t>In this presentation, the Holder provides only the Disclosure for the claim
+<tt>address</tt>. Other claims are not disclosed to the Verifier.</t>
+<t>The following example shows a presentation of a (different) SD-JWT without a
+Holder Binding JWT:</t>
+
+<artwork>eyJhbGciOiAiRVMyNTYifQ.eyJfc2QiOiBbIjA5dktySk1PbHlUV00wc2pwdV9wZE9CV
+kJRMk0xeTNLaHBINTE1blhrcFkiLCAiMnJzakdiYUMwa3k4bVQwcEpyUGlvV1RxMF9kY
+Xcxc1g3NnBvVWxnQ3diSSIsICJFa084ZGhXMGRIRUpidlVIbEVfVkNldUM5dVJFTE9pZ
+UxaaGg3WGJVVHRBIiwgIklsRHpJS2VpWmREd3BxcEs2WmZieXBoRnZ6NUZnbldhLXNON
+ndxUVhDaXciLCAiSnpZakg0c3ZsaUgwUjNQeUVNZmVadTZKdDY5dTVxZWhabzdGN0VQW
+WxTRSIsICJQb3JGYnBLdVZ1Nnh5bUphZ3ZrRnNGWEFiUm9jMkpHbEFVQTJCQTRvN2NJI
+iwgIlRHZjRvTGJnd2Q1SlFhSHlLVlFaVTlVZEdFMHc1cnREc3JaemZVYW9tTG8iLCAia
+mRyVEU4WWNiWTRFaWZ1Z2loaUFlX0JQZWt4SlFaSUNlaVVRd1k5UXF4SSIsICJqc3U5e
+VZ1bHdRUWxoRmxNXzNKbHpNYVNGemdsaFFHMERwZmF5UXdMVUs0Il0sICJpc3MiOiAia
+HR0cHM6Ly9leGFtcGxlLmNvbS9pc3N1ZXIiLCAiaWF0IjogMTY4MzAwMDAwMCwgImV4c
+CI6IDE4ODMwMDAwMDAsICJ0eXBlIjogIklkZW50aXR5Q3JlZGVudGlhbCIsICJfc2RfY
+WxnIjogInNoYS0yNTYifQ.LY36fI1eCB8YgtXogy4yz5nuNk2VIEhOfQ1TZ94WO4wVYR
+CRELbwuEmaimAyOU4STmRD4MHo0mdBvzzmPi5Png~WyJRZ19PNjR6cUF4ZTQxMmExMDh
+pcm9BIiwgImFkZHJlc3MiLCB7InN0cmVldF9hZGRyZXNzIjogIjEyMyBNYWluIFN0Iiw
+gImxvY2FsaXR5IjogIkFueXRvd24iLCAicmVnaW9uIjogIkFueXN0YXRlIiwgImNvdW5
+0cnkiOiAiVVMifV0~
+</artwork>
+</section>
+
+<section anchor="vp-sd-jwt-verification-and-processing"><name>Verification and Processing</name>
+<t>The Verifier MUST process and verify a presentation of SD-JWT VC as follows:</t>
+
+<ol spacing="compact">
+<li>REQUIRED. When processing and verifying the presentation of the SD-JWT VC,
+the Verifier MUST follow the same verification and processing rules as defined
+in <xref target="vc-sd-jwt-verification-and-processing"></xref>.</li>
+<li>OPTIONAL. If provided, the Verifier MUST verify the Holder Binding JWT
+according to Section 6.2. of <xref target="I-D.ietf-oauth-selective-disclosure-jwt"></xref>.
+To verify the Holder Binding JWT, the <tt>cnf</tt> claim of the SD-JWT MUST be used.</li>
+</ol>
+</section>
+</section>
+
+<section anchor="security-considerations"><name>Security Considerations</name>
+<t>All security considerations from JSON <xref target="RFC8259"></xref> and JWT <xref target="RFC7519"></xref>
+SHOULD be followed.</t>
+<t>If utilizing SD-JWTs, all security considerations from SD-JWT
+<xref target="I-D.ietf-oauth-selective-disclosure-jwt"></xref> SHOULD be followed.</t>
+</section>
+
+<section anchor="iana-considerations"><name>IANA Considerations</name>
+
+<section anchor="json-web-token-claims-registration"><name>JSON Web Token Claims Registration</name>
+
+<ul spacing="compact">
+<li><t>Claim Name: &quot;type&quot;</t>
+
+<ul spacing="compact">
+<li>Claim Description: Credential Type</li>
+<li>Change Controller: IESG</li>
+<li>Specification Document(s): <xref target="type-claim"></xref> of this document</li>
+</ul></li>
+</ul>
+</section>
+
+<section anchor="media-type-registration"><name>Media Type Registration</name>
+
+<section anchor="application-vc-jwt"><name>application/vc+jwt</name>
+<t>This section will register the &quot;application/vc+jwt&quot; media type <xref target="RFC2046"></xref>
+in the &quot;Media Types&quot; registry [IANA.MediaTypes] in the manner described
+in RFC 6838 <xref target="RFC6838"></xref>, which can be used to indicate that the content is
+a JWT.</t>
+
+<ul spacing="compact">
+<li>Type name: application</li>
+<li>Subtype name: vc+jwt</li>
+<li>Required parameters: n/a</li>
+<li>Optional parameters: n/a</li>
+<li>Encoding considerations: 8bit; JWT values are encoded as a series
+of base64url-encoded values (some of which may be the empty
+string) separated by period ('.') characters.</li>
+<li>Security considerations: See the Security Considerations section
+of RFC 7519</li>
+<li>Interoperability considerations: n/a</li>
+<li>Published specification: n/a</li>
+<li>Applications that use this media type: OpenID Connect, Mozilla</li>
+<li>Persona, Salesforce, Google, Android, Windows Azure, Amazon Web</li>
+<li>Services, and numerous others</li>
+<li>Fragment identifier considerations: n/a</li>
+<li>Additional information:
+  Magic number(s): n/a
+  File extension(s): n/a
+  Macintosh file type code(s): n/a</li>
+<li>Person &amp; email address to contact for further information:
+Michael Prorock, mprorock@mesur.io</li>
+<li>Intended usage: COMMON</li>
+<li>Restrictions on usage: none</li>
+<li>Author: Michael Prorock, mprorock@mesur.io</li>
+<li>Change controller: IESG</li>
+<li>Provisional registration?  Yes</li>
+</ul>
+</section>
+
+<section anchor="application-vc-sd-jwt"><name>application/vc+sd-jwt</name>
+<t>The Internet media type for a SD-JWT VC is <tt>application/vc+sd-jwt</tt>.</t>
+
+<ul spacing="compact">
+<li>Type name: : <tt>application</tt></li>
+<li>Subtype name: : <tt>vc+sd-jwt</tt></li>
+<li>Required parameters: : n/a</li>
+<li>Optional parameters: : n/a</li>
+<li>Encoding considerations: : 8-bit code points; SD-JWT VC values are
+encoded as a series of base64url-encoded values (some of which may be
+the empty string) separated by period ('.') and tilde ('~')
+characters.</li>
+<li>Security considerations: : See Security Considerations in
+<xref target="security-considerations"></xref>.</li>
+<li>Interoperability considerations: : n/a</li>
+<li>Published specification: : RFC TODO</li>
+<li>Applications that use this media type: Applications that issue,
+present, verify verifiable credentials and presentations.</li>
+<li><t>Additional information:</t>
+
+<ul spacing="compact">
+<li>Magic number(s): n/a</li>
+<li>File extension(s): n/a</li>
+<li>Macintosh file type code(s): n/a</li>
+<li>Person &amp; email address to contact for further information: TBD</li>
+<li>Intended usage: COMMON</li>
+<li>Restrictions on usage: none</li>
+<li>Author: Oliver Terbu <eref target="mailto:oliver.terbu@spruceid.com">oliver.terbu@spruceid.com</eref></li>
+<li>Change controller: IETF</li>
+</ul></li>
+</ul>
+</section>
+</section>
+</section>
+
+<section anchor="Acknowledgements"><name>Acknowledgements</name>
+<t>We would like to thank Michael Jones, Alen Horvat, Andres Uribe,
+Christian Bormann, Giuseppe De Marco, Paul Bastian, Torsten Lodderstedt,
+Tobias Looker and Kristina Yasuda for their contributions (some of which
+substantial) to this draft and to the initial set of implementations.</t>
+</section>
+
+</middle>
+
+<back>
+<references><name>Normative References</name>
+<xi:include href="https://xml2rfc.ietf.org/public/rfc/bibxml-ids/reference.I-D.ietf-oauth-selective-disclosure-jwt.xml"/>
+<xi:include href="https://xml2rfc.ietf.org/public/rfc/bibxml/reference.RFC.2046.xml"/>
+<xi:include href="https://xml2rfc.ietf.org/public/rfc/bibxml/reference.RFC.2119.xml"/>
+<xi:include href="https://xml2rfc.ietf.org/public/rfc/bibxml/reference.RFC.6838.xml"/>
+<xi:include href="https://xml2rfc.ietf.org/public/rfc/bibxml/reference.RFC.7519.xml"/>
+<xi:include href="https://xml2rfc.ietf.org/public/rfc/bibxml/reference.RFC.7800.xml"/>
+<xi:include href="https://xml2rfc.ietf.org/public/rfc/bibxml/reference.RFC.8259.xml"/>
+</references>
+<references><name>Informative References</name>
+<xi:include href="https://xml2rfc.ietf.org/public/rfc/bibxml/reference.RFC.7517.xml"/>
+</references>
+
+</back>
+
+</rfc>
