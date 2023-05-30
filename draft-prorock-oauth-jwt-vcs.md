@@ -23,7 +23,7 @@ fullname="Daniel Fett"
 organization="Authlete Inc. "
     [author.address]
     email = "mail@danielfett.de"
-    
+
 [[author]]
 initials = "M."
 surname = "Prorock"
@@ -357,24 +357,165 @@ application.
 The following is a non-normative example of an unsecured payload of an
 SD-JWT VC.
 
-<{{examples/01/user_claims.json}}
+```
+{
+  "type": "IdentityCredential",
+  "given_name": "John",
+  "family_name": "Doe",
+  "email": "johndoe@example.com",
+  "phone_number": "+1-202-555-0101",
+  "address": {
+    "street_address": "123 Main St",
+    "locality": "Anytown",
+    "region": "Anystate",
+    "country": "US"
+  },
+  "birthdate": "1940-01-01",
+  "is_over_18": true,
+  "is_over_21": true,
+  "is_over_65": true
+}
+```
 
 The following is a non-normative example of how the unsecured payload of the
 SD-JWT VC above can be used in a SD-JWT where the resulting SD-JWT VC contains
 only claims about the Subject that are selectively disclosable:
 
-<{{examples/01/sd_jwt_payload.json}}
+```
+{
+  "_sd": [
+    "09vKrJMOlyTWM0sjpu_pdOBVBQ2M1y3KhpH515nXkpY",
+    "2rsjGbaC0ky8mT0pJrPioWTq0_daw1sX76poUlgCwbI",
+    "EkO8dhW0dHEJbvUHlE_VCeuC9uRELOieLZhh7XbUTtA",
+    "IlDzIKeiZdDwpqpK6ZfbyphFvz5FgnWa-sN6wqQXCiw",
+    "JzYjH4svliH0R3PyEMfeZu6Jt69u5qehZo7F7EPYlSE",
+    "PorFbpKuVu6xymJagvkFsFXAbRoc2JGlAUA2BA4o7cI",
+    "TGf4oLbgwd5JQaHyKVQZU9UdGE0w5rtDsrZzfUaomLo",
+    "jdrTE8YcbY4EifugihiAe_BPekxJQZICeiUQwY9QqxI",
+    "jsu9yVulwQQlhFlM_3JlzMaSFzglhQG0DpfayQwLUK4"
+  ],
+  "iss": "https://example.com/issuer",
+  "iat": 1683000000,
+  "exp": 1883000000,
+  "type": "IdentityCredential",
+  "_sd_alg": "sha-256",
+  "cnf": {
+    "jwk": {
+      "kty": "EC",
+      "crv": "P-256",
+      "x": "TCAER19Zvu3OHF4j4W4vfSVoHIP1ILilDls7vCeGemc",
+      "y": "ZxjiWWbZMQGHVWKVQ4hbSIirsVfuecCE6t4jT9F2HZQ"
+    }
+  }
+}
+```
 
 Note that a `cnf` claim has been added to the SD-JWT payload to express the
 confirmation method of the holder binding.
 
 The following are the Disclosures belonging to the SD-JWT payload above:
 
-{{examples/01/disclosures.md}}
+Claim given_name:
+
+* SHA-256 Hash: jsu9yVulwQQlhFlM_3JlzMaSFzglhQG0DpfayQwLUK4
+* Disclosure:
+WyIyR0xDNDJzS1F2ZUNmR2ZyeU5STjl3IiwgImdpdmVuX25hbWUiLCAiSm9obiJd
+* Contents: ["2GLC42sKQveCfGfryNRN9w", "given_name", "John"]
+
+Claim family_name:
+
+* SHA-256 Hash: TGf4oLbgwd5JQaHyKVQZU9UdGE0w5rtDsrZzfUaomLo
+* Disclosure:
+WyJlbHVWNU9nM2dTTklJOEVZbnN4QV9BIiwgImZhbWlseV9uYW1lIiwgIkRvZSJd
+* Contents: ["eluV5Og3gSNII8EYnsxA_A", "family_name", "Doe"]
+
+Claim email:
+
+* SHA-256 Hash: JzYjH4svliH0R3PyEMfeZu6Jt69u5qehZo7F7EPYlSE
+* Disclosure:
+WyI2SWo3dE0tYTVpVlBHYm9TNXRtdlZBIiwgImVtYWlsIiwgImpvaG5kb2VA
+ZXhhbXBsZS5jb20iXQ
+* Contents: ["6Ij7tM-a5iVPGboS5tmvVA", "email", "johndoe@example.com"]
+
+Claim phone_number:
+
+* SHA-256 Hash: PorFbpKuVu6xymJagvkFsFXAbRoc2JGlAUA2BA4o7cI
+* Disclosure:
+WyJlSThaV205UW5LUHBOUGVOZW5IZGhRIiwgInBob25lX251bWJlciIsICIr
+MS0yMDItNTU1LTAxMDEiXQ
+* Contents: ["eI8ZWm9QnKPpNPeNenHdhQ", "phone_number",
+"+1-202-555-0101"]
+
+Claim address:
+
+* SHA-256 Hash: IlDzIKeiZdDwpqpK6ZfbyphFvz5FgnWa-sN6wqQXCiw
+* Disclosure:
+WyJRZ19PNjR6cUF4ZTQxMmExMDhpcm9BIiwgImFkZHJlc3MiLCB7InN0cmVl
+dF9hZGRyZXNzIjogIjEyMyBNYWluIFN0IiwgImxvY2FsaXR5IjogIkFueXRv
+d24iLCAicmVnaW9uIjogIkFueXN0YXRlIiwgImNvdW50cnkiOiAiVVMifV0
+* Contents: ["Qg_O64zqAxe412a108iroA", "address", {"street_address":
+"123 Main St", "locality": "Anytown", "region": "Anystate", "country":
+"US"}]
+
+Claim birthdate:
+
+* SHA-256 Hash: jdrTE8YcbY4EifugihiAe_BPekxJQZICeiUQwY9QqxI
+* Disclosure:
+WyJBSngtMDk1VlBycFR0TjRRTU9xUk9BIiwgImJpcnRoZGF0ZSIsICIxOTQwLTAxLTAxIl0
+* Contents: ["AJx-095VPrpTtN4QMOqROA", "birthdate", "1940-01-01"] 
+
+Claim is_over_18:
+
+* SHA-256 Hash: 09vKrJMOlyTWM0sjpu_pdOBVBQ2M1y3KhpH515nXkpY
+* Disclosure:
+WyJQYzMzSk0yTGNoY1VfbEhnZ3ZfdWZRIiwgImlzX292ZXJfMTgiLCB0cnVlXQ
+* Contents: ["Pc33JM2LchcU_lHggv_ufQ", "is_over_18", true]
+
+Claim is_over_21:
+
+* SHA-256 Hash: 2rsjGbaC0ky8mT0pJrPioWTq0_daw1sX76poUlgCwbI
+* Disclosure:
+WyJHMDJOU3JRZmpGWFE3SW8wOXN5YWpBIiwgImlzX292ZXJfMjEiLCB0cnVlXQ
+* Contents: ["G02NSrQfjFXQ7Io09syajA", "is_over_21", true]
+
+Claim is_over_65:
+
+* SHA-256 Hash: EkO8dhW0dHEJbvUHlE_VCeuC9uRELOieLZhh7XbUTtA
+* Disclosure:
+WyJsa2x4RjVqTVlsR1RQVW92TU5JdkNBIiwgImlzX292ZXJfNjUiLCB0cnVlXQ
+* Contents: ["lklxF5jMYlGTPUovMNIvCA", "is_over_65", true]
 
 The SD-JWT and the Disclosures would then be serialized by the Issuer into the following format for issuance to the Holder:
 
-<{{examples/01/combined_issuance.txt}}
+```
+eyJhbGciOiAiRVMyNTYifQ.eyJfc2QiOiBbIjA5dktySk1PbHlUV00wc2pwdV9wZE9CV
+kJRMk0xeTNLaHBINTE1blhrcFkiLCAiMnJzakdiYUMwa3k4bVQwcEpyUGlvV1RxMF9kY
+Xcxc1g3NnBvVWxnQ3diSSIsICJFa084ZGhXMGRIRUpidlVIbEVfVkNldUM5dVJFTE9pZ
+UxaaGg3WGJVVHRBIiwgIklsRHpJS2VpWmREd3BxcEs2WmZieXBoRnZ6NUZnbldhLXNON
+ndxUVhDaXciLCAiSnpZakg0c3ZsaUgwUjNQeUVNZmVadTZKdDY5dTVxZWhabzdGN0VQW
+WxTRSIsICJQb3JGYnBLdVZ1Nnh5bUphZ3ZrRnNGWEFiUm9jMkpHbEFVQTJCQTRvN2NJI
+iwgIlRHZjRvTGJnd2Q1SlFhSHlLVlFaVTlVZEdFMHc1cnREc3JaemZVYW9tTG8iLCAia
+mRyVEU4WWNiWTRFaWZ1Z2loaUFlX0JQZWt4SlFaSUNlaVVRd1k5UXF4SSIsICJqc3U5e
+VZ1bHdRUWxoRmxNXzNKbHpNYVNGemdsaFFHMERwZmF5UXdMVUs0Il0sICJpc3MiOiAia
+HR0cHM6Ly9leGFtcGxlLmNvbS9pc3N1ZXIiLCAiaWF0IjogMTY4MzAwMDAwMCwgImV4c
+CI6IDE4ODMwMDAwMDAsICJ0eXBlIjogIklkZW50aXR5Q3JlZGVudGlhbCIsICJfc2RfY
+WxnIjogInNoYS0yNTYiLCAiY25mIjogeyJqd2siOiB7Imt0eSI6ICJFQyIsICJjcnYiO
+iAiUC0yNTYiLCAieCI6ICJUQ0FFUjE5WnZ1M09IRjRqNFc0dmZTVm9ISVAxSUxpbERsc
+zd2Q2VHZW1jIiwgInkiOiAiWnhqaVdXYlpNUUdIVldLVlE0aGJTSWlyc1ZmdWVjQ0U2d
+DRqVDlGMkhaUSJ9fX0.7-uYweCWRwFrKmcv1sqd3HFMd5Tn1PcytgarFfO7k-L0uSo-M
+WXmU-RjekKFblomzevP-6w8rNZ2sIo7f5D7fw~WyIyR0xDNDJzS1F2ZUNmR2ZyeU5STj
+l3IiwgImdpdmVuX25hbWUiLCAiSm9obiJd~WyJlbHVWNU9nM2dTTklJOEVZbnN4QV9BI
+iwgImZhbWlseV9uYW1lIiwgIkRvZSJd~WyI2SWo3dE0tYTVpVlBHYm9TNXRtdlZBIiwg
+ImVtYWlsIiwgImpvaG5kb2VAZXhhbXBsZS5jb20iXQ~WyJlSThaV205UW5LUHBOUGVOZ
+W5IZGhRIiwgInBob25lX251bWJlciIsICIrMS0yMDItNTU1LTAxMDEiXQ~WyJRZ19PNj
+R6cUF4ZTQxMmExMDhpcm9BIiwgImFkZHJlc3MiLCB7InN0cmVldF9hZGRyZXNzIjogIj
+EyMyBNYWluIFN0IiwgImxvY2FsaXR5IjogIkFueXRvd24iLCAicmVnaW9uIjogIkFueX
+N0YXRlIiwgImNvdW50cnkiOiAiVVMifV0~WyJBSngtMDk1VlBycFR0TjRRTU9xUk9BIi
+wgImJpcnRoZGF0ZSIsICIxOTQwLTAxLTAxIl0~WyJQYzMzSk0yTGNoY1VfbEhnZ3ZfdW
+ZRIiwgImlzX292ZXJfMTgiLCB0cnVlXQ~WyJHMDJOU3JRZmpGWFE3SW8wOXN5YWpBIiw
+gImlzX292ZXJfMjEiLCB0cnVlXQ~WyJsa2x4RjVqTVlsR1RQVW92TU5JdkNBIiwgImlz
+X292ZXJfNjUiLCB0cnVlXQ
+```
 
 ## Verification and Processing {#vc-sd-jwt-verification-and-processing}
 
@@ -553,7 +694,30 @@ MUST be ignored.
 The following is a non-normative example of a presentation of the SD-JWT shown
 above including a Holder Binding JWT:
 
-<{{examples/01/combined_presentation.txt}}
+```
+eyJhbGciOiAiRVMyNTYifQ.eyJfc2QiOiBbIjA5dktySk1PbHlUV00wc2pwdV9wZE9CV
+kJRMk0xeTNLaHBINTE1blhrcFkiLCAiMnJzakdiYUMwa3k4bVQwcEpyUGlvV1RxMF9kY
+Xcxc1g3NnBvVWxnQ3diSSIsICJFa084ZGhXMGRIRUpidlVIbEVfVkNldUM5dVJFTE9pZ
+UxaaGg3WGJVVHRBIiwgIklsRHpJS2VpWmREd3BxcEs2WmZieXBoRnZ6NUZnbldhLXNON
+ndxUVhDaXciLCAiSnpZakg0c3ZsaUgwUjNQeUVNZmVadTZKdDY5dTVxZWhabzdGN0VQW
+WxTRSIsICJQb3JGYnBLdVZ1Nnh5bUphZ3ZrRnNGWEFiUm9jMkpHbEFVQTJCQTRvN2NJI
+iwgIlRHZjRvTGJnd2Q1SlFhSHlLVlFaVTlVZEdFMHc1cnREc3JaemZVYW9tTG8iLCAia
+mRyVEU4WWNiWTRFaWZ1Z2loaUFlX0JQZWt4SlFaSUNlaVVRd1k5UXF4SSIsICJqc3U5e
+VZ1bHdRUWxoRmxNXzNKbHpNYVNGemdsaFFHMERwZmF5UXdMVUs0Il0sICJpc3MiOiAia
+HR0cHM6Ly9leGFtcGxlLmNvbS9pc3N1ZXIiLCAiaWF0IjogMTY4MzAwMDAwMCwgImV4c
+CI6IDE4ODMwMDAwMDAsICJ0eXBlIjogIklkZW50aXR5Q3JlZGVudGlhbCIsICJfc2RfY
+WxnIjogInNoYS0yNTYiLCAiY25mIjogeyJqd2siOiB7Imt0eSI6ICJFQyIsICJjcnYiO
+iAiUC0yNTYiLCAieCI6ICJUQ0FFUjE5WnZ1M09IRjRqNFc0dmZTVm9ISVAxSUxpbERsc
+zd2Q2VHZW1jIiwgInkiOiAiWnhqaVdXYlpNUUdIVldLVlE0aGJTSWlyc1ZmdWVjQ0U2d
+DRqVDlGMkhaUSJ9fX0.7-uYweCWRwFrKmcv1sqd3HFMd5Tn1PcytgarFfO7k-L0uSo-M
+WXmU-RjekKFblomzevP-6w8rNZ2sIo7f5D7fw~WyJRZ19PNjR6cUF4ZTQxMmExMDhpcm
+9BIiwgImFkZHJlc3MiLCB7InN0cmVldF9hZGRyZXNzIjogIjEyMyBNYWluIFN0IiwgIm
+xvY2FsaXR5IjogIkFueXRvd24iLCAicmVnaW9uIjogIkFueXN0YXRlIiwgImNvdW50cn
+kiOiAiVVMifV0~eyJhbGciOiAiRVMyNTYifQ.eyJub25jZSI6ICIxMjM0NTY3ODkwIiw
+gImF1ZCI6ICJodHRwczovL2V4YW1wbGUuY29tL3ZlcmlmaWVyIiwgImlhdCI6IDE2ODU
+xMDc0NjJ9.LJW9AJ-tnpfaurCo7iaiNI3s37hxz6o5n_RifTtVy1ukqhrQ9GMcKbBhTm
+RBhZI6FtQtV5EeuRFXUcDC3-gWeA
+```
 
 In this presentation, the Holder provides only the Disclosure for the claim
 `address`. Other claims are not disclosed to the Verifier.
@@ -561,7 +725,24 @@ In this presentation, the Holder provides only the Disclosure for the claim
 The following example shows a presentation of a (different) SD-JWT without a
 Holder Binding JWT:
 
-<{{examples/02/combined_presentation.txt}}
+```
+eyJhbGciOiAiRVMyNTYifQ.eyJfc2QiOiBbIjA5dktySk1PbHlUV00wc2pwdV9wZE9CV
+kJRMk0xeTNLaHBINTE1blhrcFkiLCAiMnJzakdiYUMwa3k4bVQwcEpyUGlvV1RxMF9kY
+Xcxc1g3NnBvVWxnQ3diSSIsICJFa084ZGhXMGRIRUpidlVIbEVfVkNldUM5dVJFTE9pZ
+UxaaGg3WGJVVHRBIiwgIklsRHpJS2VpWmREd3BxcEs2WmZieXBoRnZ6NUZnbldhLXNON
+ndxUVhDaXciLCAiSnpZakg0c3ZsaUgwUjNQeUVNZmVadTZKdDY5dTVxZWhabzdGN0VQW
+WxTRSIsICJQb3JGYnBLdVZ1Nnh5bUphZ3ZrRnNGWEFiUm9jMkpHbEFVQTJCQTRvN2NJI
+iwgIlRHZjRvTGJnd2Q1SlFhSHlLVlFaVTlVZEdFMHc1cnREc3JaemZVYW9tTG8iLCAia
+mRyVEU4WWNiWTRFaWZ1Z2loaUFlX0JQZWt4SlFaSUNlaVVRd1k5UXF4SSIsICJqc3U5e
+VZ1bHdRUWxoRmxNXzNKbHpNYVNGemdsaFFHMERwZmF5UXdMVUs0Il0sICJpc3MiOiAia
+HR0cHM6Ly9leGFtcGxlLmNvbS9pc3N1ZXIiLCAiaWF0IjogMTY4MzAwMDAwMCwgImV4c
+CI6IDE4ODMwMDAwMDAsICJ0eXBlIjogIklkZW50aXR5Q3JlZGVudGlhbCIsICJfc2RfY
+WxnIjogInNoYS0yNTYifQ.LY36fI1eCB8YgtXogy4yz5nuNk2VIEhOfQ1TZ94WO4wVYR
+CRELbwuEmaimAyOU4STmRD4MHo0mdBvzzmPi5Png~WyJRZ19PNjR6cUF4ZTQxMmExMDh
+pcm9BIiwgImFkZHJlc3MiLCB7InN0cmVldF9hZGRyZXNzIjogIjEyMyBNYWluIFN0Iiw
+gImxvY2FsaXR5IjogIkFueXRvd24iLCAicmVnaW9uIjogIkFueXN0YXRlIiwgImNvdW5
+0cnkiOiAiVVMifV0~
+```
 
 ## Verification and Processing {#vp-sd-jwt-verification-and-processing}
 
