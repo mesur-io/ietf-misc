@@ -132,17 +132,18 @@ Figure 1: SD-CWT Issuance and Presentation Flow
 
 ## Creating an SD-CWT
 
-An SD-CWT is a CWT of the hash digests of the claim values with unique
-random salts and other metadata. It MUST be digitally signed using the
-issuer's private key.
+An SD-CWT is a CWT containing the hash digests of the claim values
+combined with unique random salts and additional metadata for disclosed
+values. The SD-CWT MUST be digitally signed using the issuer's private
+key.
 
 ```
 SD-CWT-CLAIMS = (METADATA, CWT-CLAIMS)
 SD-CWT = SD-CWT-CLAIMS | SIG(SD-CWT-CLAIMS, ISSUER-PRIV-KEY)
 ```
 
-CWT-CLAIMS is a simple object with claim names mapped to hash digests
-over the claim values with unique random salts:
+CWT-CLAIMS is an object where claim names are mapped to hash digests of
+the claim values combined with unique random salts:
 
 ```
 CWT-CLAIMS = (
@@ -150,40 +151,126 @@ CWT-CLAIMS = (
 )*
 ```
 
-In a case where an SD-CWT is sent with all information disclose, the
+In a case where an SD-CWT is sent with all information disclosed, the
 SD-CWT is sent together with the mapping of the plain-text claim values,
 the salt values, and potentially some other information. In this case,
-the the payload contains the CWT-CLAIMS, and the field "disclosures"
-contains the mapping, the salt values, and other metadata.
+the the payload contains the CWT-CLAIMS, and the "disclosures" field in
+the unprotected header contains the mapping, the salt values, and any
+additional metadata that might be present in the unprotected header.
 
-In a case where an SD-CWT is sent with only some information discosed,
-only the desired claims, mappings, and salts are added to the
-disclosure.
+In a case where an SD-CWT is sent with only selected information
+disclosed, only the disclosed claims, mappings, and salts are added to
+the disclosure.
 
-The CDDL fragment that represents the above text for COSE_Sign1 follows.
+Disclosures are structured as a "claim-pair" with a 32 bit salt, and the
+byte string of the disclosed value.
+
+
+```
+claim-pair = {
+  1 => uint .size 4,  ; 32-bit salt
+  2 => bstr           ; disclosed value
+}
+```
+
+The CDDL fragment that represents the above text for COSE_Sign1 is
+provided below:
 
 ```
 SD-CWT = [
-    Headers,
+    protected,
+    unprotected: {
+      ? disclosures: [* claim-pair] / nil
+    },
     payload : bstr / nil,
     signature : bstr,
-    disclosures: bstr / nil
 ]
 ```
 
+The issuer SHOULD take appropriate percautions to verify that the salts
+are unique random values to prevent vulnerability to rainbow table
+attacks against the hashes.
+
 ## Verifying an SD-CWT
 
-TBD - Describe verifiacation process
+To verify an SD-CWT, the recipient extracts the protected CWT
+claims from the payload. These CWT claims contain hash digests of the
+original claim values combined with unique random salts.
+
+The recipient MUST validate that the protected header values such as
+issuer, audience, and expiration match the expected values for this
+SD-CWT per the guidelines set forward in [@!RFC8392].  If any items do
+not match the expected or allowed values per [@!RFC8392] the SD-CWT MUST
+be rejected.
+
+The payload and other protected claims MUST then be validated according
+to the section "Validating a CWT" in [@!RFC8392].  If the CWT is not a
+COSE_Sign or COSE_Sign1 the CWT MUST be rejected. If any validations
+according [@!RFC8152] instructions for validating a COSE_Sign/COSE_Sign1
+object fail, the CWT MUST be rejected.
+
+The recipient that checks for any disclosures in the unprotected header.
+If they are present, the the claim values and salts MUST be extracted
+from the unprotected header.
+
+For each disclosed claim, the hash digest MUST be recomputed from the
+value and salt in the unprotected header.  If the hash digest does not
+equal the corresponding digest in the payload the SD-CWT MUST be
+rejected.
+
+By performing these steps, the recipient can cryptographically verify
+the integrity of the protected claims and verify they have not been
+tampered with or substituted after issuance by the trusted issuer. The
+disclosures provide the plaintext claim values for utilization by the
+recipient.
 
 ## Holder Binding and other common scenarios
 
 ### Holder Binding
 
-TBD - Discuss optioinality, mechanism, and value
+Holder binding links an SD-CWT to its intended recipient. It prevents
+misuse if the token is intercepted or stolen. Binding mechanisms include
+cryptographic key confirmation, biometric data inclusion, or embedding
+holder-specific claims. The description of exact mechanisms for holder
+binding are outside the scope of this document at the present time.
+
+While optional, holder binding enhances SD-CWT security. It enables
+accountability by auditing actions to specific entities. For sensitive
+data, it augments trust by proving the claimant owns the token.
+
+Issuers should assess their use case when considering holder binding.
+Where accountability and non-repudiation are critical, binding provides
+assurance the token reaches the intended holder. With thoughtful
+implementation, binding can customize SD-CWT without compromising user
+privacy. Proportional use of holder binding balances security, privacy
+and flexibility for SD-CWT applications.
 
 ### Counter Signatures
 
-TBD- Discuss use with countersignatures in the unprotected header
+Counter signatures allow an SD-CWT to be endorsed by additional entities
+beyond the original issuer. The counter signature is applied in the
+unprotected header, attesting to the validity of the primary SD-CWT
+signature over the protected claims.
+
+Counter signatures provide multiple benefits for SD-CWT:
+
+- Verification by multiple entities, preventing repudiation by any one
+  party.
+- Added integrity protection in case the original signing key is
+  compromised.
+- Allows separate signers for protected claims versus unprotected
+  disclosures.
+
+To utilize a counter signature, the primary SD-CWT is constructed and
+signed as normal. Then an additional signer computes the counter
+signature over the entire SD-CWT, including the original signature. This
+counter signature is placed in the unprotected header when transmitting
+the SD-CWT.
+
+Recipients validate the counter signature after verifying the primary
+signature, ensuring endorsements by all involved entities. Care should
+be taken to ensure robust trust in both signature authorities when
+relying on counter signatures.
 
 ## Data Structures
 
