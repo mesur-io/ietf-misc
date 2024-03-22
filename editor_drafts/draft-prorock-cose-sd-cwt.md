@@ -158,6 +158,10 @@ the the payload contains the CWT-CLAIMS, and the "disclosures" field in
 the unprotected header contains the mapping, the salt values, and any
 additional metadata that might be present in the unprotected header.
 
+Disclosure in the unprotected header is important so that the content
+type of the payload may be set appropriately, and is distinct from
+any disclosed information. 
+
 In a case where an SD-CWT is sent with only selected information
 disclosed, only the disclosed claims, mappings, and salts are added to
 the disclosure.
@@ -206,7 +210,7 @@ be rejected.
 The payload and other protected claims MUST then be validated according
 to the section "Validating a CWT" in [@!RFC8392].  If the CWT is not a
 COSE_Sign or COSE_Sign1 the CWT MUST be rejected. If any validations
-according [@!RFC8152] instructions for validating a COSE_Sign/COSE_Sign1
+according [@!RFC9052] instructions for validating a COSE_Sign/COSE_Sign1
 object fail, the CWT MUST be rejected.
 
 The recipient that checks for any disclosures in the unprotected header.
@@ -272,6 +276,21 @@ signature, ensuring endorsements by all involved entities. Care should
 be taken to ensure robust trust in both signature authorities when
 relying on counter signatures.
 
+The CDDL fragment that represents an SD-CWT with an abbreviated counter 
+signature is below:
+
+```
+SD-CWT = [
+    protected,
+    unprotected: {
+      ? disclosures: [* claim-pair] / nil
+      COSE_Countersignature0: bstr
+    },
+    payload : bstr / nil,
+    signature : bstr,
+]
+```
+
 ## Data Structures
 
 TBD - Describe common data structures in CDDL
@@ -282,7 +301,7 @@ TBD - Provide examples
 
 # Security Considerations
 
-All security considerations from COSE [@!RFC8152] and CWT [@!RFC8392]
+All security considerations from COSE [@!RFC9052] and CWT [@!RFC8392]
 SHOULD be followed.
 
 To maintain the integrity of the issued claims, the Selective
@@ -333,8 +352,8 @@ a CWT.
 
 The authors would like to thank those that have worked on similar items
 for providing selective disclosure mechanisms in JSON, especially:
-Tobias Looker, Kristina Yasuda, Daniel Fett, Oliver Terbu, and Michael
-Jones.
+Brent Zundel, Roy Williams, Tobias Looker, Kristina Yasuda, Daniel Fett, 
+Oliver Terbu, and Michael Jones.
 
 {backmatter} 
 
