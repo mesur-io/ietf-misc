@@ -37,12 +37,9 @@ organization = "Transmute"
 
 .# Abstract
 
-This document describes how to perform selective disclosure of claims
-withing a CBOR Web Token (CWT) [@!RFC8392] as well as how to create and
-verify those tokens.
-
-This document does not define any new cryptography.
-
+This document describes a data minimization technique for use with CBOR Web Token (CWT) [@!RFC8392].
+The approach is based on SD-JWT [@?I-D.ietf-oauth-selective-disclosure-jwt], with changes to align with CBOR Object Signing and Encryption (cose).
+This document updates RFC8392.
 
 {mainmatter}
 
@@ -54,287 +51,404 @@ document are to be interpreted as described in [@!RFC2119].
 
 # Terminology
 
-The following terminology is used throughout this document:
+The terminology used in this document is inherited from RFC8392, RFC9052 and RFC9053.
 
-signature
-: The digital signature output.
+This document defines the following new terms related to concepts originally described in SD-JWT.
 
-Claim Name
-: The human-readable name used to identify a claim.
+SD-CWT (Selective Disclosure CBOR Web Token (CWT))
+: A CWT equivalent of an SD-JWT. Unlike SD-JWT, SD-CWT is not a new token type, it is a profile of CWT. This is the CWT equivalent of application/sd-jwt.
 
-Claim Key
-: The CBOR map key used to identify a claim.
+Selective Disclosure Key Binding Token
+: A CWT used to demonstrate possession of a confirmation method, associated to an SD-CWT. This is the CWT counterpart to application/kb+jwt. The key binding token is included in the `sd_kwt` claim in the unprotected header of SD-CWT presentations.
 
-Claim Value
-: The CBOR map value representing the value of the claim.
+Disclosures
+: The salted claims disclosed via an SD-CWT. They are included in the `sd_claims` array in the unprotected header.
 
-CWT Claims Set
-: The CBOR map that contains the claims conveyed by the CWT.
+Redacted keys
+: The hashes of claims redacted from a map data structure.
 
+Redacted elements
+: The hashes of elements redacted from an array data structure. 
 
-# Selective disclosure of claims within a CWT
+presented_sd_claims
+: The CBOR map containing zero or more disclosable claims.
 
-## Overview
+validated_presented_sd_claims
+: The CBOR map containing all mandatory to disclose claims signed by the issuer, all selectively disclosed claims presented by the holder, and ommiting all instances of redacted_keys and redacted_element claims that are present in the original sd_cwt.
 
-CBOR claims are cpommonly signed using [COSE
-Sign1](https://www.rfc-editor.org/rfc/rfc9052#section-4.2) where only
-one signature is placed on a particular message.  There are many cases
-where a signer may wish to ensure that the authenticity of a message has
-not been compromised via a digital signature, but where they only wish
-to reveal some values of the original signed message.  This document
-outlines a precise method for formulating and transmitting these
-messages, encompassing elements such as claims, claim keys, and
-necessary data structures. This kind of signed information exchange
-proves particularly beneficial in scenarios where a CBOR Web Token (CWT)
-might transit via an intermediary before undergoing third-party
-verification. Frequently, such a third party might necessitate, or be
-permitted to access only a subset of the information encapsulated in the
-CWT. This proposed model facilitates selective data disclosure, while
-still preserving the ability to validate the original signature.
+## Introduction
 
-This representation relies on claims registered in the [IANA CBOR Web
-Token (CWT) Claims Registry](https://www.iana.org/assignments/cwt/cwt.xhtml) 
-whenever possible.
+This document updates RFC8392, enabling the holder of a CWT to disclose or redact special claims marked disclosable by the issuer of a CWT.
+The approach is modeled after SD-JWT, with changes to align with conventions from CBOR Object Signing and Encryption (COSE). 
 
-## Flow Diagram
+The ability to minimize disclosure of sensitive identity attributes, while demonstrating possession of key material and enabling a verifier to confirm the attributes have been unaltered by the issuer, is an important building block for many digital credential use cases.
 
-Figure 1: SD-CWT Issuance and Presentation Flow
+The approach described in this specification is not new. SD-JWT was modeled after mDoc, both of which enable similar capabilities.
+This specification brings selective disclosure capabilities to CWT, enabling application profiles to impose additional security criteria beyond the minimum security requirements this specification requires.
 
+Specific use cases are out of scope for this document.
+However, feedback has been gathered from a wide range of stakeholders, some of which is reflected in the examples provided in the appendix.
+
+## Issuance & Presentation
+
+Figure 1: High level SD-CWT Issuance and Presentation Flow
+
+``` aasvg
+Issuer                                 Holder                                    Verifier 
+  │                                      │                                          │     
+  │                                      ├───┐                                      │     
+  │                                      │   │ Key Gen                              │     
+  │              Request SD-CWT          │◄──┘                                      │     
+  │◄─────────────────────────────────────┤                                          │     
+  │                                      │                                          │     
+  ├─────────────────────────────────────►│             Request Nonce                │     
+  │              Receive SD-CWT          ├─────────────────────────────────────────►│     
+  │                                      │                                          │     
+  │                                      │◄─────────────────────────────────────────┤     
+  │                                      │             Receive Nonce                │     
+  │                                      ├───┐                                      │     
+  │                                      │   │ Redact Claims                        │     
+  │                                      │◄──┘                                      │     
+  │                                      │                                          │     
+  │                                      ├───┐                                      │     
+  │                                      │   │ Demonstrate                          │     
+  │                                      │◄──┘ Posession                            │     
+  │                                      │                                          │     
+  │                                      │             Present SD-CWT               │     
+  │                                      ├─────────────────────────────────────────►│     
+  │                                      │                                          │     
 ```
-           +------------+
-           |            |
-           |   Issuer   |
-           |            |
-           +------------+
-                 |
-               Issues
-               SD-CWT
-                 |
-                 v
-           +------------+
-           |            |
-           |   Holder   |
-           |            |
-           +------------+
-                 |
-              Presents
-               SD-CWT
-                 |
-                 v
-           +-------------+
-           |             |+
-           |  Verifiers  ||+
-           |             |||
-           +-------------+||
-            +-------------+|
-             +-------------+
-```
+
+This diagram captures the essential details necessary to issue and present an SD-CWT.
+The parameters necessary to support these processes can be obtained using transports or protocols which are out of scope for this specification.
+However the following guidance is generally recommended, regardless of protocol or transport.
+
+1. The issuer SHOULD confirm the holder controls all confirmation material before issuing credentials using the `cnf` claim.
+2. To protect against replay attacks,  the verifier SHOULD provide a nonce, and reject requests that do not include an acceptable an nonce (cnonce). This guidance can be ignored in cases where replay attacks are mitigated as another layer.
 
 ## Creating an SD-CWT
 
-An SD-CWT is a CWT containing the hash digests of the claim values
-combined with unique random salts and additional metadata for disclosed
-values. The SD-CWT MUST be digitally signed using the issuer's private
-key.
+SD-CWT is modeled after SD-JWT, with adjustments to align with conventions in CBOR and COSE.
 
+An SD-CWT is a CWT containing the hash digest (the "blinded claim hash") of each blinded claim, and optionally the salted claim values (and often claim names) for the values that are actually disclosed.
+
+A Holder key binding CWT (see next section) MUST be present in a `sd_kbt` claim in the unprotected header when presenting an SD-CWT to a Verifier.
+
+There does not exist a concept of "SD-CWT without key binding".
+
+The following informative CDDL is provided.
+
+Please note this example contains claims for demonstration of the disclosure syntax, such as `swversion`.
+
+`sd_kbt` is marked optional because it is not present after issuance, however is MUST be present in all subsequent presentations of the sd-cwt.
+
+``` cddl
+sd-cwt = [
+  protected,
+  unprotected: {
+    ?(sd_claims: TBD): bstr .cbor [ + claim-pair],
+    ?(sd_kbt: TBD): bstr .cbor sd-cwt-kbt,
+  },
+  payload :  bstr .cbor {
+    &(iss: 1) => tstr, ; "https://issuer.example"
+    &(sub: 2) => tstr, ; "https://device.example"
+    &(aud: 3) => tstr, ; "https://verifier.example"
+    &(exp: 4) => int,  ; 1883000000
+    &(nbf: 5) => int,  ; 1683000000
+    &(iat: 6) => int,  ; 1683000000
+    &(cnf: 8) => sd-cwt-cnf,  ; 1683000000
+
+    ; sd-cwt new claims
+    &(sd_alg: TBD) => int,            ; -16 for sha-256
+    &(redacted_keys: TBD) => [ bstr ] ; redacted map key
+    &(swversion: 271) => [              ; example array
+      ...,
+      {
+        &(redacted_element: TBD) => bstr ; redacted array element
+      }
+      ...
+    ]      
+  }
+  signature : bstr,
+]
 ```
-SD-CWT-CLAIMS = (METADATA, CWT-CLAIMS)
-SD-CWT = SD-CWT-CLAIMS | SIG(SD-CWT-CLAIMS, ISSUER-PRIV-KEY)
+
+Disclosures are structured as a "sd-cwt-claim-pair" with a 32 bit salt, and the byte string of the disclosed value.
+
+``` cddl
+sd-cwt-claim-pair = [
+  ; The RECOMMENDED minimum length 
+  ; of the randomly-generated portion of the salt is 128 bits
+  uint .size 16,  
+  bstr           ; disclosed value
+]
 ```
 
-CWT-CLAIMS is an object where claim names are mapped to hash digests of
-the claim values combined with unique random salts:
+## Creating a Key Binding Token
 
+A Key Binding Token is used to assure the Verifier that a) the Holder of the parent SD-CWT is in possession of the private key it used to request that SD-CWT from the Issuer ("confirmation"), and b) the list of disclosures included by the Holder were not tampered with. Holder Key Binding prevents an attacker from copying and pasting disclosures, or from adding or removing disclosures without detection. 
+
+Confirmation is established according to RFC 8747, using the `cnf` claim in the payload of the KBT. A hash of the list of presented disclosure hashes is included in the `sd_hash` claim in the payload of the KBT.
+
+The following informative CDDL is provided, however new confirmation methods might be registered and used after this document is published.
+
+``` cddl
+sd-cwt-cnf = COSE_Key / Encrypted_COSE_Key / kid
 ```
-CWT-CLAIMS = (
-    CLAIM-NAME: HASH(SALT | CLAIM-VALUE)
-)*
+
+The proof of possession associated with the confirmation claim in an SD-CWT is called the SD-CWT-KBT.
+As noted above, this token MUST be present in presentations of the SD-CWT and MUST NOT be present in the issued form of the SD-CWT which is first delivered from an issuer to a client.
+
+``` cddl
+sd-cwt-kbt = [
+  protected: bstr .cbor { 
+    &(alg: 1) => int  ; CWT algorithm
+    &(typ: 16) => int ; Explicit type according to draft-ietf-cose-typ-header-parameter
+  },
+  unprotected: {},
+  payload : bstr .cbor {
+    &(cnonce: 39) => bstr,   ; e0a156bb3f
+    &(aud: 3) => tstr, ; "https://verifier.example"
+    &(iat: 6) => int,  ; 1683000000
+    &(sd_hash: TBD) => bstr, ; f0e4c2f76c589...61b1816e13b
+
+    ?(exp: 4) => int,  ; 1883000000
+    ?(nbf: 5) => int,  ; 1683000000
+
+    ; additional CWT claims are allowed.
+  }
+  signature : bstr,
+]
 ```
 
-In a case where an SD-CWT is sent with all information disclosed, the
-SD-CWT is sent together with the mapping of the plain-text claim values,
-the salt values, and potentially some other information. In this case,
-the the payload contains the CWT-CLAIMS, and the "disclosures" field in
-the unprotected header contains the mapping, the salt values, and any
-additional metadata that might be present in the unprotected header.
+## Validating an SD-CWT
 
-Disclosure in the unprotected header is important so that the content
-type of the payload may be set appropriately, and is distinct from
-any disclosed information. 
+The exact order of the following steps MAY be changed, as long as all checks are performed before deciding if an SD-CWT is valid.
 
-In a case where an SD-CWT is sent with only selected information
-disclosed, only the disclosed claims, mappings, and salts are added to
-the disclosure.
+First the verifier must validate the SD-CWT as described in {{Section 7.2 of RFC 8392}}.
 
-Disclosures are structured as a "claim-pair" with a 32 bit salt, and the
-byte string of the disclosed value.
+After validation, the SD-CWT-KBT MUST be extracted from the unprotected header, and validated as described in {{Section 7.2 of RFC 8392}}.
 
+The verifier MUST confirm the `sd_hash` claim of the validated SD-CWT-KBT matches the hash of the `sd_claims` member of the unprotected header, using the hash algorithm obtained from the validated `sd_alg` claim of the SD-CWT.
 
-```
-claim-pair = {
-  1 => uint .size 4,  ; 32-bit salt
-  2 => bstr           ; disclosed value
+Next, the verifier MUST extract and decode the disclosed claims from the `sd_claims` in the unprotected header.
+
+The decoded `sd_claims` are converted to an intermediate data structure called `presented_sd_claims` which is used to transform the presented SD-CWT claimset, into a validated SD-CWT claimset containing no redaction claims.
+
+One possible concrete representation of the intermediate data structure `presented_sd_claims` could be:
+
+``` cddl-ish
+{
+  &(digest_of_salt_and_disclosure: bstr) => sd-cwt-claim-pair-disclosed-value
 }
 ```
 
-The CDDL fragment that represents the above text for COSE_Sign1 is
-provided below:
+The verifier MUST compute the hash of the sd-cwt-claim-pair, in order to match the disclosed value to redacted claims in the SD-CWT.
 
-```
-SD-CWT = [
-    protected,
-    unprotected: {
-      ? disclosures: [* claim-pair] / nil
-    },
-    payload : bstr / nil,
-    signature : bstr,
-]
-```
+To verify an SD-CWT, the recipient extracts the protected CWT claims from the payload. 
+These CWT claims contain hash digests of the original claim values combined with unique random salts.
 
-The issuer SHOULD take appropriate percautions to verify that the salts
-are unique random values to prevent vulnerability to rainbow table
-attacks against the hashes.
+By performing these steps, the recipient can cryptographically verify the integrity of the protected claims and verify they have not been tampered with or substituted after issuance by the trusted issuer. 
+The disclosures provide the plaintext claim values for utilization by the recipient.
 
-## Verifying an SD-CWT
+The algorithm for transorming the CWT Claimset mirrors the algorithm defined in SD-JWT.
+The primary differences are that CBOR maps have replaced JSON Objects, and that CBOR labels (integers) have replaced the strings used by SD-JWT which are `_sd` and `...`.
+This specification uses the term `validated_presented_sd_claims` to refer to the final CBOR map which is produced by subsituting disclosed values which are presented, and removing labels marked for redaction.
 
-To verify an SD-CWT, the recipient extracts the protected CWT
-claims from the payload. These CWT claims contain hash digests of the
-original claim values combined with unique random salts.
-
-The recipient MUST validate that the protected header values such as
-issuer, audience, and expiration match the expected values for this
-SD-CWT per the guidelines set forward in [@!RFC8392].  If any items do
-not match the expected or allowed values per [@!RFC8392] the SD-CWT MUST
-be rejected.
-
-The payload and other protected claims MUST then be validated according
-to the section "Validating a CWT" in [@!RFC8392].  If the CWT is not a
-COSE_Sign or COSE_Sign1 the CWT MUST be rejected. If any validations
-according [@!RFC9052] instructions for validating a COSE_Sign/COSE_Sign1
-object fail, the CWT MUST be rejected.
-
-The recipient that checks for any disclosures in the unprotected header.
-If they are present, the the claim values and salts MUST be extracted
-from the unprotected header.
-
-For each disclosed claim, the hash digest MUST be recomputed from the
-value and salt in the unprotected header.  If the hash digest does not
-equal the corresponding digest in the payload the SD-CWT MUST be
-rejected.
-
-By performing these steps, the recipient can cryptographically verify
-the integrity of the protected claims and verify they have not been
-tampered with or substituted after issuance by the trusted issuer. The
-disclosures provide the plaintext claim values for utilization by the
-recipient.
-
-## Holder Binding and other common scenarios
-
-### Holder Binding
-
-Holder binding links an SD-CWT to its intended recipient. It prevents
-misuse if the token is intercepted or stolen. Binding mechanisms include
-cryptographic key confirmation, biometric data inclusion, or embedding
-holder-specific claims. The description of exact mechanisms for holder
-binding are outside the scope of this document at the present time.
-
-While optional, holder binding enhances SD-CWT security. It enables
-accountability by auditing actions to specific entities. For sensitive
-data, it augments trust by proving the claimant owns the token.
-
-Issuers should assess their use case when considering holder binding.
-Where accountability and non-repudiation are critical, binding provides
-assurance the token reaches the intended holder. With thoughtful
-implementation, binding can customize SD-CWT without compromising user
-privacy. Proportional use of holder binding balances security, privacy
-and flexibility for SD-CWT applications.
-
-### Counter Signatures
-
-Counter signatures allow an SD-CWT to be endorsed by additional entities
-beyond the original issuer. The counter signature is applied in the
-unprotected header, attesting to the validity of the primary SD-CWT
-signature over the protected claims.
-
-Counter signatures provide multiple benefits for SD-CWT:
-
-- Verification by multiple entities, preventing repudiation by any one
-  party.
-- Added integrity protection in case the original signing key is
-  compromised.
-- Allows separate signers for protected claims versus unprotected
-  disclosures.
-
-To utilize a counter signature, the primary SD-CWT is constructed and
-signed as normal. Then an additional signer computes the counter
-signature over the entire SD-CWT, including the original signature. This
-counter signature is placed in the unprotected header when transmitting
-the SD-CWT.
-
-Recipients validate the counter signature after verifying the primary
-signature, ensuring endorsements by all involved entities. Care should
-be taken to ensure robust trust in both signature authorities when
-relying on counter signatures.
-
-The CDDL fragment that represents an SD-CWT with an abbreviated counter 
-signature is below:
-
-```
-SD-CWT = [
-    protected,
-    unprotected: {
-      ? disclosures: [* claim-pair] / nil
-      COSE_Countersignature0: bstr
-    },
-    payload : bstr / nil,
-    signature : bstr,
-]
-```
-
-## Data Structures
-
-TBD - Describe common data structures in CDDL
+As described in SD-JWT, if there remain unused SD-CWT disclosures at the end of this procedure the SD-CWT MUST be considered invalid, as if the siganture had failed to verify.
 
 ## Examples
 
-TBD - Provide examples
+TBD - Provide more examples
+
+### Minimal spanning example
+
+The following example contains claims needed to demonstrate redaction of key-value pairs and array elements.
+
+``` cbor-diag
+/ cose-sign1 / 18([
+  / protected / << {
+    / alg / 1  : -35 / ES384 /
+    / typ / 16 : "application/sd+cwt"
+    / kid /    : 'https://issuer.example/cwt-key3'
+  } >>,
+  / unprotected / {
+    / sd_claims / TBD1 : [  /these are the three disclosures/
+        <<[
+            /salt/   h'c93c7ff5...72c71e26',
+            /claim/  "age_over_18",
+            /value/  true
+        ]>>,
+        <<[
+            /salt/   h'399c641e...2aa18c1e',
+            /claim/  "region",
+            /value/  "ca" /California/
+        ]>>,
+        <<[
+            /salt/   h'82501bb4...6c655f32',
+            /value/  "4.1.7"
+        ]>>
+    ]
+    / sd_kbt    / TBD2 : << [
+      / protected / << {
+          / alg / 1 : -35 / ES384 /
+          / typ / 16 : "application/kb+cwt"
+      } >>,
+      / unprotected / {},
+      / payload / <<
+        / cnonce / 39    : h'e0a156bb3f',
+        / aud     / 3    : "https://verifier.example",
+        / iat     / 6    : 1783000000,
+        / sd_alg  / TBD4 : -16  /SHA-256/ 
+        / sd_hash / TBD3 : h'c341bb...4a5f3f',  /hash of sd_claims   /
+                                                /using hash in sd_alg/
+      >>,
+      / signature / h'1237af2e...6789456'
+    ] >>
+  },
+  / payload / <<
+    / iss / 1   : "https://issuer.example",
+    / sub / 2   : "https://device.example",
+    / exp / 2   : 1883000000,
+    / iat / 2   : 1683000000,
+    / cnf / 8   : {
+      / cose key / 1 : {
+        / alg: ES256 /  3: 35,
+        / kty: EC2   /  1: 2,
+        / crv: P-256 / -1: 1,
+        / x / -2: h'768ed8...8626e',
+        / y / -3: h'6a48cc...fd5d5'
+      }
+    },
+    / sd_alg / TBD4        : -16, / SHA-256 /
+    / redacted_keys / TBD5 : [ 
+        h'abbd...efef',  / redacted age_over_18 /
+        h'132d...75e7',  / redacted age_over_21 /
+    ],
+    / swversion / 271 : [
+      "3.5.5",
+      { "...": h'45dd...87af'  /redacted version element/ }
+    ],
+    "address": {
+        "country" : "us",            / United States /
+        /redacted_keys/ TBD5 : [
+            h'adb70604...03da225b',  / redacted region /
+            h'e04bdfc4...4d3d40bc'   / redacted post_code /
+        ]
+    }
+  >>,
+  / signature / h'3337af2e...66959614'
+])
 
 # Security Considerations
 
-All security considerations from COSE [@!RFC9052] and CWT [@!RFC8392]
-SHOULD be followed.
+Security considerations from COSE [@!RFC9052] and CWT [@!RFC8392] apply to this specificaton.
 
-To maintain the integrity of the issued claims, the Selective
-Disclosure-CBOR Web Token (SD-CWT) MUST be signed by the issuer. Absence
-of this signature leaves the SD-CWT vulnerable to attackers, who can
-alter or append claims (for instance, modifying the "email" attribute to
-hijack the victim's account or inserting a fabricated academic
-qualification).
+## Random Numbers
 
-The verifier is required to verify the signature on the SD-CWT to
-guarantee its authenticity and that no tampering has occurred post
-issuance. If the signature on the SD-CWT fails the verification process,
-the SD-CWT MUST be unequivocally rejected.
+Each salt used to protect disclosed claims MUST be generated independently from the salts of other claims. The salts MUST be generated from a source of entropy that is acceptable to the issuer.
+Poor choice of salts can lead to brute force attacks that can reveal redacted claims.
 
 # IANA Considerations
 
-## Media Type Registration
+## COSE Header Parameters
 
-This section will register the "application/sd-cwt" media type [@!RFC2046]
-in the "Media Types" registry [IANA.MediaTypes] in the manner described
-in RFC 6838 [@!RFC6838], which can be used to indicate that the content is
-a CWT.
+IANA is requested to add the following entries to the CWT claims registry (https://www.iana.org/assignments/cose/cose.xhtml#header-parameters).
+
+### sd_claims
+
+The following completed registration template per RFC8152 is provided:
+
+Name: sd_claims
+Label: TBD (requested assignment TBD)
+Value Type: bstr
+Value Registry: (empty)
+Description: A list of selectively disclosed claims, which were originally redacted, then later disclosed at the discretion of the sender.
+Reference: RFC XXXX
+
+### sd_kbt
+
+The following completed registration template per RFC8152 is provided:
+
+Name: sd_kbt
+Label: TBD (requested assignment TBD)
+Value Type: bstr
+Value Registry: (empty)
+Description: Key binding token for disclosed claims
+Reference: RFC XXXX
+
+## CBOR Web Token (CWT) Claims
+
+IANA is requested to add the following entries to the CWT claims registry (https://www.iana.org/assignments/cwt/cwt.xhtml).
+
+### sd_alg
+
+The following completed registration template per RFC8392 is provided:
+
+Claim Name: sd_alg
+Claim Description: Hash algorithm used for selective disclosure
+JWT Claim Name: sd_alg
+Claim Key: TBD (request assignment TBD)
+Claim Value Type(s): integer
+Change Controller: IETF
+Specification Document(s): RFC XXXX
+
+### sd_hash
+
+The following completed registration template per RFC8392 is provided:
+
+Claim Name: sd_hash
+Claim Description: Hash of encoded disclosed claims
+JWT Claim Name: sd_hash
+Claim Key: TBD (request assignment TBD)
+Claim Value Type(s): bstr
+Change Controller: IETF
+Specification Document(s): RFC XXXX
+
+### redacted_keys
+
+The following completed registration template per RFC8392 is provided:
+
+Claim Name: redacted_keys
+Claim Description: Redacted claims in a map.
+JWT Claim Name: redacted_keys
+Claim Key: TBD (request assignment TBD)
+Claim Value Type(s): array of bstr
+Change Controller: IETF
+Specification Document(s): RFC XXXX
+
+### redacted_element
+
+The following completed registration template per RFC8392 is provided:
+
+Claim Name: redacted_element
+Claim Description: Redacted element of an array
+JWT Claim Name: redacted_element
+Claim Key: TBD (request assignment TBD)
+Claim Value Type(s): array of bstr
+Change Controller: IETF
+Specification Document(s): RFC XXXX
+
+## Media Types
+
+This section requests the registration of new media types in https://www.iana.org/assignments/media-types/media-types.xhtml.
+
+### application/sd+cwt
+
+IANA is requested to add the following entry to the media types registry in accordance with RFC6838, RFC4289, and RFC6657.
+
+The following completed registration template is provided:
 
 * Type name: application
-* Subtype name: sd-cwt
+* Subtype name: sd+cwt
 * Required parameters: n/a
 * Optional parameters: n/a
 * Encoding considerations: binary
 * Security considerations: See the Security Considerations section
-  of [@!RFC8392]
+  of RFC XXXX, and [@!RFC8392]
 * Interoperability considerations: n/a
-* Published specification: This Specification
-* Applications that use this media type: mesur.io, transmute
+* Published specification: RFC XXXX
+* Applications that use this media type: TBD
 * Fragment identifier considerations: n/a
 * Additional information:
       Magic number(s): n/a
@@ -345,8 +459,69 @@ a CWT.
 * Intended usage: COMMON
 * Restrictions on usage: none
 * Author: Michael Prorock, mprorock@mesur.io
-* Change controller: IESG
-* Provisional registration?  Yes
+* Change controller: IETF
+* Provisional registration?  No
+
+### application/kb+cwt
+
+IANA is requested to add the following entry to the media types registry in accordance with RFC6838, RFC4289, and RFC6657.
+
+The following completed registration template is provided:
+
+* Type name: application
+* Subtype name: kb+cwt
+* Required parameters: n/a
+* Optional parameters: n/a
+* Encoding considerations: binary
+* Security considerations: See the Security Considerations section
+  of RFC XXXX, and [@!RFC8392]
+* Interoperability considerations: n/a
+* Published specification: RFC XXXX
+* Applications that use this media type: TBD
+* Fragment identifier considerations: n/a
+* Additional information:
+      Magic number(s): n/a
+      File extension(s): n/a
+      Macintosh file type code(s): n/a
+* Person & email address to contact for further information:
+  Orie Steele, orie@transmute.industries
+* Intended usage: COMMON
+* Restrictions on usage: none
+* Author: Orie Steele, orie@transmute.industries
+* Change controller: IETF
+* Provisional registration?  No
+
+# Implementation Status
+
+Note to RFC Editor: Please remove this section as well as references to {{BCP205}} before AUTH48.
+
+This section records the status of known implementations of the protocol defined by this specification at the time of posting of this Internet-Draft, and is based on a proposal described in {{BCP205}}.
+The description of implementations in this section is intended to assist the IETF in its decision processes in progressing drafts to RFCs.
+Please note that the listing of any individual implementation here does not imply endorsement by the IETF.
+Furthermore, no effort has been spent to verify the information presented here that was supplied by IETF contributors.
+This is not intended as, and must not be construed to be, a catalog of available implementations or their features.
+Readers are advised to note that other implementations may exist.
+
+According to {{BCP205}}, "this will allow reviewers and working groups to assign due consideration to documents that have the benefit of running code, which may serve as evidence of valuable experimentation and feedback that have made the implemented protocols more mature.
+It is up to the individual working groups to use this information as they see fit".
+
+## Transmute Prototype
+
+Organization: Transmute Industries Inc
+
+Name: https://github.com/transmute-industries/sd-cwt
+
+Description: An open source implementation of this draft.
+
+Maturity: Prototype
+
+Coverage: The current version ('main') implements functionality similar to that described in this document, and will be revised, with breaking changes to support the generation of example data to support this specification.
+
+License: Apache-2.0
+
+Implementation Experience: No interop testing has been done yet. The code works as proof of concept, but is not yet production ready.
+
+Contact: Orie Steele (orie@transmute.industries)
 
 # Acknowledgements 
 
