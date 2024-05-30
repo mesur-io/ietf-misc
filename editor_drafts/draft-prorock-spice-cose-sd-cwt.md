@@ -130,7 +130,7 @@ However the following guidance is generally recommneded regardless of protocol o
 
 SD-CWT is modeled after SD-JWT, with adjustments to align with conventions in CBOR and COSE.
 
-An SD-CWT is a CWT containing the hash digests of the claim values combined with unique random salts and additional metadata for disclosed values.
+An SD-CWT is a CWT containing the hash digest (the "blinded claim hash") of each blinded claim, and optionally the salted claim values (and often claim names) for the values that are actually disclosed.
 
 A Holder key binding CWT (see next section) MUST be present in a `sd_kbt` claim in the unprotected header when presenting an SD-CWT to a Verifier.
 
