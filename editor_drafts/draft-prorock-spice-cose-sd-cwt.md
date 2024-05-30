@@ -124,7 +124,7 @@ The parameters necessary to support these processes can be obtained using transp
 However the following guidance is generally recommended, regardless of protocol or transport.
 
 1. The issuer SHOULD confirm the holder controls all confirmation material before issuing credentials using the `cnf` claim.
-2. The verifier SHOULD use a nonce (cnonce), to protect against replay attacks. 
+2. To protect against replay attacks,  the verifier SHOULD provide a nonce, and reject requests that do not include an acceptable an nonce (cnonce). This guidance can be ignored in cases where replay attacks are mitigated as another layer.
 
 ## Creating an SD-CWT
 
