@@ -61,8 +61,8 @@ sd_cwt
 sd_kbt
 : A CWT used to demonstrate possession of a confirmation method, associated to an SD-CWT. This is the CWT equivalent of application/kb+jwt.
 
-sd_claims
-: The claims disclosed via an SD-CWT. In compact SD-JWT, these are encoded using the `~`.
+Disclosures
+: The salted claims disclosed via an SD-CWT. They are included in the `sd_claims` array in the unprotected header.
 
 redacted_keys
 : The claims redacted in a map data structure. In SD-JWT, this label is the object property "_sd".
