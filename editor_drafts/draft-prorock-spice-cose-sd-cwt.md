@@ -266,22 +266,40 @@ The following example contains claims needed to demonstrate redaction of key-val
 ``` cbor-diag
 / cose-sign1 / 18([
   / protected / << {
-    / alg / 1 : -35 / ES384 /
+    / alg / 1  : -35 / ES384 /
     / typ / 16 : "application/sd+cwt"
+    / kid /    : 'https://issuer.example/cwt-key3'
   } >>,
   / unprotected / {
-    / sd_claims / TBD : h'82501bb4...6c655f32'
-    / sd_kbt    / TBD : << [
+    / sd_claims / TBD1 : [  /these are the three disclosures/
+        <<[
+            /salt/   h'c93c7ff5...72c71e26',
+            /claim/  "age_over_18",
+            /value/  true
+        ]>>,
+        <<[
+            /salt/   h'399c641e...2aa18c1e',
+            /claim/  "region",
+            /value/  "ca" /California/
+        ]>>,
+        <<[
+            /salt/   h'82501bb4...6c655f32',
+            /value/  "4.1.7"
+        ]>>
+    ]
+    / sd_kbt    / TBD2 : << [
       / protected / << {
           / alg / 1 : -35 / ES384 /
           / typ / 16 : "application/kb+cwt"
       } >>,
       / unprotected / {},
       / payload / <<
-        / cnonce / 39   : h'e0a156bb3f',
-        / aud     / 3   : "https://verifier.example",
-        / iat     / 6   : 1783000000,
-        / sd_hash / TBD : h'c341bb4...a5f3f',
+        / cnonce / 39    : h'e0a156bb3f',
+        / aud     / 3    : "https://verifier.example",
+        / iat     / 6    : 1783000000,
+        / sd_alg  / TBD4 : -16  /SHA-256/ 
+        / sd_hash / TBD3 : h'c341bb...4a5f3f',  /hash of sd_claims   /
+                                                /using hash in sd_alg/
       >>,
       / signature / h'1237af2e...6789456'
     ] >>
@@ -300,20 +318,25 @@ The following example contains claims needed to demonstrate redaction of key-val
         / y / -3: h'6a48cc...fd5d5'
       }
     },
-
-    / sd_alg / TBD        : -16, / SHA-256 /
-    / redacted_keys / TBD : [ 
-      / redacted age_over_18 / h'abbd...efef',
-      / redacted age_over_21 / h'132d...75e7',
-    ]
+    / sd_alg / TBD4        : -16, / SHA-256 /
+    / redacted_keys / TBD5 : [ 
+        h'abbd...efef',  / redacted age_over_18 /
+        h'132d...75e7',  / redacted age_over_21 /
+    ],
     / swversion / 271 : [
       "3.5.5",
-      { / redacted version / TBD: h'45dd...87af }
-    ]
+      { "...": h'45dd...87af'  /redacted version element/ }
+    ],
+    "address": {
+        "country" : "us",            / United States /
+        /redacted_keys/ TBD5 : [
+            h'adb70604...03da225b',  / redacted region /
+            h'e04bdfc4...4d3d40bc'   / redacted post_code /
+        ]
+    }
   >>,
   / signature / h'3337af2e...66959614'
 ])
-```
 
 # Security Considerations
 
