@@ -37,7 +37,7 @@ organization = "Transmute"
 
 .# Abstract
 
-This document describes a data minimization technique of use with CBOR Web Token (CWT) [@!RFC8392].
+This document describes a data minimization technique for use with CBOR Web Token (CWT) [@!RFC8392].
 The approach is based on SD-JWT, with changes to align with CBOR Object Signing and Encryption (cose).
 This document updates RFC8392.
 
