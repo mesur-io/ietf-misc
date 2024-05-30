@@ -177,7 +177,9 @@ Disclosures are structured as a "sd-cwt-claim-pair" with a 32 bit salt, and the 
 
 ``` cddl
 sd-cwt-claim-pair = [
-  uint .size 4,  ; 32-bit salt
+  ; The RECOMMENDED minimum length 
+  ; of the randomly-generated portion of the salt is 128 bits
+  uint .size 16,  
   bstr           ; disclosed value
 ]
 ```
