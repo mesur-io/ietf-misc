@@ -59,7 +59,7 @@ sd_cwt
 : A CWT equivalent of an SD-JWT. Unlike SD-JWT, SD-CWT is not a new token type, it is a profile of CWT. This is the CWT equivalent of application/sd-jwt.
 
 sd_kbt
-: A CWT used to demonstrate possession of a confirmation method, associated to an SD-CWT. This is the CWT equivalent of application/kb+jwt.
+: A CWT used to demonstrate possession of a confirmation method, associated to an SD-CWT. This is the CWT counterpart to application/kb+jwt. The key binding token is included in the `sd_kwt` claim in the unprotected header of SD-CWT presentations.
 
 Disclosures
 : The salted claims disclosed via an SD-CWT. They are included in the `sd_claims` array in the unprotected header.
