@@ -317,7 +317,7 @@ Security considerations from COSE [@!RFC9052] and CWT [@!RFC8392] apply to this 
 
 ## Random Numbers
 
-The salts used to protect disclosed claims MUST be generated independently from a source of entropy that is acceptable to the issuer.
+Each salt used to protect disclosed claims MUST be generated independently from the salts of other claims. The salts MUST be generated from a source of entropy that is acceptable to the issuer.
 Poor choice of salts can lead to brute force attacks that can reveal redacted claims.
 
 # IANA Considerations
