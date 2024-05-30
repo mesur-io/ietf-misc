@@ -76,7 +76,7 @@ presented_sd_claims
 validated_presented_sd_claims
 : The CBOR map containing all mandatory to disclose claims signed by the issuer, all selectively disclosed claims presented by the holder, and ommiting all instances of redacted_keys and redacted_element claims that are present in the original sd_cwt.
 
-## Introduction
+# Introduction
 
 This document updates RFC8392, enabling the holder of a CWT to disclose or redact special claims marked disclosable by the issuer of a CWT.
 The approach is modeled after SD-JWT, with changes to align with conventions from CBOR Object Signing and Encryption (COSE). 
@@ -126,7 +126,7 @@ However the following guidance is generally recommended, regardless of protocol 
 1. The issuer SHOULD confirm the holder controls all confirmation material before issuing credentials using the `cnf` claim.
 2. To protect against replay attacks,  the verifier SHOULD provide a nonce, and reject requests that do not include an acceptable an nonce (cnonce). This guidance can be ignored in cases where replay attacks are mitigated as another layer.
 
-## Creating an SD-CWT
+# Creating an SD-CWT
 
 SD-CWT is modeled after SD-JWT, with adjustments to align with conventions in CBOR and COSE.
 
@@ -184,7 +184,7 @@ sd-cwt-claim-pair = [
 ]
 ```
 
-## Creating a Key Binding Token
+# Creating a Key Binding Token
 
 A Key Binding Token is used to assure the Verifier that a) the Holder of the parent SD-CWT is in possession of the private key it used to request that SD-CWT from the Issuer ("confirmation"), and b) the list of disclosures included by the Holder were not tampered with. Holder Key Binding prevents an attacker from copying and pasting disclosures, or from adding or removing disclosures without detection. 
 
@@ -221,7 +221,7 @@ sd-cwt-kbt = [
 ]
 ```
 
-## Validating an SD-CWT
+# Validating an SD-CWT
 
 The exact order of the following steps MAY be changed, as long as all checks are performed before deciding if an SD-CWT is valid.
 
@@ -257,11 +257,11 @@ This specification uses the term `validated_presented_sd_claims` to refer to the
 
 As described in SD-JWT, if there remain unused SD-CWT disclosures at the end of this procedure the SD-CWT MUST be considered invalid, as if the siganture had failed to verify.
 
-## Examples
+# Examples
 
 TBD - Provide more examples
 
-### Minimal spanning example
+## Minimal spanning example
 
 The following example contains claims needed to demonstrate redaction of key-value pairs and array elements.
 
@@ -339,6 +339,7 @@ The following example contains claims needed to demonstrate redaction of key-val
   >>,
   / signature / h'3337af2e...66959614'
 ])
+```
 
 # Security Considerations
 
