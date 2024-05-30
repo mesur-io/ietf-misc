@@ -55,7 +55,7 @@ The terminology used in this document is inherited from RFC8392, RFC9052 and RFC
 
 This document defines the following new terms related to concepts originally described in SD-JWT.
 
-sd_cwt
+SD-CWT (Selective Disclosure CBOR Web Token (CWT))
 : A CWT equivalent of an SD-JWT. Unlike SD-JWT, SD-CWT is not a new token type, it is a profile of CWT. This is the CWT equivalent of application/sd-jwt.
 
 sd_kbt
