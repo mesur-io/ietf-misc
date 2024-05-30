@@ -64,7 +64,7 @@ Selective Disclosure Key Binding Token
 Disclosures
 : The salted claims disclosed via an SD-CWT. They are included in the `sd_claims` array in the unprotected header.
 
-redacted_keys
+Redacted keys
 : The hashes of claims redacted from a map data structure.
 
 redacted_element
