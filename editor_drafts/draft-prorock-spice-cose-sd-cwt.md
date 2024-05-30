@@ -119,7 +119,7 @@ Issuer                                 Holder                                   
   │                                      │                                          │     
 ```
 
-This diagram captures the essential details necessary to issue and present and SD-CWT.
+This diagram captures the essential details necessary to issue and present an SD-CWT.
 The parameters necessary to support these processes can be obtained using transports or protocols which are out of scope for this specification.
 However the following guidance is generally recommneded regardless of protocol or transport.
 
