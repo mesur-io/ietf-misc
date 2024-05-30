@@ -67,7 +67,7 @@ Disclosures
 Redacted keys
 : The hashes of claims redacted from a map data structure.
 
-redacted_element
+Redacted elements
 : The hashes of elements redacted from an array data structure. 
 
 presented_sd_claims
