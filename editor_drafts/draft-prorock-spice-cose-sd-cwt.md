@@ -65,7 +65,7 @@ Disclosures
 : The salted claims disclosed via an SD-CWT. They are included in the `sd_claims` array in the unprotected header.
 
 redacted_keys
-: The claims redacted in a map data structure. In SD-JWT, this label is the object property "_sd".
+: The hashes of claims redacted from a map data structure.
 
 redacted_element
 : The elements redacted in an array data structure. In SD-JWT, this label is the object property "...".
