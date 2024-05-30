@@ -58,7 +58,7 @@ This document defines the following new terms related to concepts originally des
 SD-CWT (Selective Disclosure CBOR Web Token (CWT))
 : A CWT equivalent of an SD-JWT. Unlike SD-JWT, SD-CWT is not a new token type, it is a profile of CWT. This is the CWT equivalent of application/sd-jwt.
 
-sd_kbt
+Selective Disclosure Key Binding Token
 : A CWT used to demonstrate possession of a confirmation method, associated to an SD-CWT. This is the CWT counterpart to application/kb+jwt. The key binding token is included in the `sd_kwt` claim in the unprotected header of SD-CWT presentations.
 
 Disclosures
