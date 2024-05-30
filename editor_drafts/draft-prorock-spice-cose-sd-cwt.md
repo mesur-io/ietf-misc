@@ -68,7 +68,7 @@ redacted_keys
 : The hashes of claims redacted from a map data structure.
 
 redacted_element
-: The elements redacted in an array data structure. In SD-JWT, this label is the object property "...".
+: The hashes of elements redacted from an array data structure. 
 
 presented_sd_claims
 : The CBOR map containing zero or more disclosable claims.
