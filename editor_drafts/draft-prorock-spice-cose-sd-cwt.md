@@ -132,7 +132,7 @@ SD-CWT is modeled after SD-JWT, with adjustments to align with conventions in CB
 
 An SD-CWT is a CWT containing the hash digests of the claim values combined with unique random salts and additional metadata for disclosed values.
 
-Unlike SD-JWT, key binding MUST be present in the unprotected header.
+A Holder key binding CWT (see next section) MUST be present in a `sd_kbt` claim in the unprotected header when presenting an SD-CWT to a Verifier.
 
 There does not exist a concept of "SD-CWT without key binding".
 
