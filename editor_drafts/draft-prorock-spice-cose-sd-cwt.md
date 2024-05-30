@@ -334,7 +334,7 @@ Name: sd_claims
 Label: TBD (requested assignment TBD)
 Value Type: bstr
 Value Registry: (empty)
-Description: Claims disclosed selectively
+Description: A list of selectively disclosed claims, which were originally redacted, then later disclosed at the discretion of the sender.
 Reference: RFC XXXX
 
 ### sd_kbt
