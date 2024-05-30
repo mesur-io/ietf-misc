@@ -182,7 +182,11 @@ sd-cwt-claim-pair = [
 ]
 ```
 
-Confirmation is established according to RFC 8747, using the `cnf` claim.
+## Creating a Key Binding Token
+
+A Key Binding Token is used to assure the Verifier that a) the Holder of the parent SD-CWT is in possession of the private key it used to request that SD-CWT from the Issuer ("confirmation"), and b) the list of disclosures included by the Holder were not tampered with. Holder Key Binding prevents an attacker from copying and pasting disclosures, or from adding or removing disclosures without detection. 
+
+Confirmation is established according to RFC 8747, using the `cnf` claim in the payload of the KBT. A hash of the list of presented disclosure hashes is included in the `sd_hash` claim in the payload of the KBT.
 
 The following informative CDDL is provided, however new confirmation methods might be registered and used after this document is published.
 
