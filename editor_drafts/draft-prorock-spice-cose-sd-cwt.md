@@ -59,7 +59,7 @@ SD-CWT (Selective Disclosure CBOR Web Token (CWT))
 : A CWT equivalent of an SD-JWT. Unlike SD-JWT, SD-CWT is not a new token type, it is a profile of CWT. This is the CWT equivalent of application/sd-jwt.
 
 Selective Disclosure Key Binding Token
-: A CWT used to demonstrate possession of a confirmation method, associated to an SD-CWT. This is the CWT counterpart to application/kb+jwt. The key binding token is included in the `sd_kwt` claim in the unprotected header of SD-CWT presentations.
+: A CWT used to demonstrate possession of a confirmation method, associated to an SD-CWT. This is the CWT counterpart to application/kb+jwt. The key binding token is included in the `sd_kbt` claim in the unprotected header of SD-CWT presentations.
 
 Disclosures
 : The salted claims disclosed via an SD-CWT. They are included in the `sd_claims` array in the unprotected header.
@@ -70,10 +70,10 @@ Redacted keys
 Redacted elements
 : The hashes of elements redacted from an array data structure. 
 
-presented_sd_claims
+Presented Disclosed Claims
 : The CBOR map containing zero or more disclosable claims.
 
-validated_presented_sd_claims
+Validated Disclosed Claimset
 : The CBOR map containing all mandatory to disclose claims signed by the issuer, all selectively disclosed claims presented by the holder, and ommiting all instances of redacted_keys and redacted_element claims that are present in the original sd_cwt.
 
 # Introduction
@@ -161,7 +161,7 @@ sd-cwt = [
     ; sd-cwt new claims
     &(sd_alg: TBD) => int,            ; -16 for sha-256
     &(redacted_keys: TBD) => [ bstr ] ; redacted map key
-    &(swversion: 271) => [              ; example array
+    &(swversion: 271) => [            ; example array
       ...,
       {
         &(redacted_element: TBD) => bstr ; redacted array element
@@ -233,9 +233,9 @@ The verifier MUST confirm the `sd_hash` claim of the validated SD-CWT-KBT matche
 
 Next, the verifier MUST extract and decode the disclosed claims from the `sd_claims` in the unprotected header.
 
-The decoded `sd_claims` are converted to an intermediate data structure called `presented_sd_claims` which is used to transform the presented SD-CWT claimset, into a validated SD-CWT claimset containing no redaction claims.
+The decoded `sd_claims` are converted to an intermediate data structure called Presented Disclosed Claims which is used to transform the presented SD-CWT claimset, into a validated SD-CWT claimset containing no redaction claims.
 
-One possible concrete representation of the intermediate data structure `presented_sd_claims` could be:
+One possible concrete representation of the intermediate data structure Presented Disclosed Claims could be:
 
 ``` cddl-ish
 {
@@ -253,7 +253,7 @@ The disclosures provide the plaintext claim values for utilization by the recipi
 
 The algorithm for transorming the CWT Claimset mirrors the algorithm defined in SD-JWT.
 The primary differences are that CBOR maps have replaced JSON Objects, and that CBOR labels (integers) have replaced the strings used by SD-JWT which are `_sd` and `...`.
-This specification uses the term `validated_presented_sd_claims` to refer to the final CBOR map which is produced by subsituting disclosed values which are presented, and removing labels marked for redaction.
+This specification uses the term Validated Disclosed Claimset to refer to the final CBOR map which is produced by subsituting disclosed values which are presented, and removing labels marked for redaction.
 
 As described in SD-JWT, if there remain unused SD-CWT disclosures at the end of this procedure the SD-CWT MUST be considered invalid, as if the siganture had failed to verify.
 
