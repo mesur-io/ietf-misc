@@ -287,6 +287,15 @@ Otherwise the SD-CWT is considered valid, and the Validated Disclosed Claimset i
 Further validation logic can be applied to the Validated Disclosed Claimset, as it might normally be applied to a validated CWT claimset.
 
 
+## Credential Types
+
+This specification defines the CWT claim vct (for verifiable credential type). The vct value MUST be a case-sensitive StringOrURI (see [RFC7519]) value serving as an identifier for the type of the SD-CWT claimset. The vct value MUST be a Collision-Resistant Name as defined in Section 2 of [RFC7515].
+
+This claim is defined COSE based verifiable credentials, similar to the JOSE based verifiable credentials described in Section 3.2.2.1.1 of SD-JWT-VC.
+
+Profiles built on this specifiation are also encouraged to use more specific media types, as described in [draft-ietf-cose-typ-header-parameter](https://datatracker.ietf.org/doc/draft-ietf-cose-typ-header-parameter/).
+
+
 # Examples
 
 TBD - Provide more examples
@@ -460,6 +469,18 @@ Claim Description: Redacted element of an array
 JWT Claim Name: redacted_element
 Claim Key: TBD (request assignment TBD6)
 Claim Value Type(s): array of bstr
+Change Controller: IETF
+Specification Document(s): RFC XXXX
+
+### vct
+
+The following completed registration template per RFC8392 is provided:
+
+Claim Name: vct
+Claim Description: Verifiable credential type
+JWT Claim Name: vct
+Claim Key: TBD (request assignment TBD7)
+Claim Value Type(s): bstr
 Change Controller: IETF
 Specification Document(s): RFC XXXX
 
