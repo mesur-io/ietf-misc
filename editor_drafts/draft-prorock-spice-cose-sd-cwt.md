@@ -199,7 +199,7 @@ sd-cwt = [
 ]
 ```
 
-As described above, an SD-CWT is a CWT with claims require confirmation and support selective disclosure.
+As described above, an SD-CWT is a CWT with claims that require confirmation and support selective disclosure.
 Confirmation mitigates risks associated with bearer token theft.
 Note that new confirmation methods might be registered and used after this document is published.
 Selective disclosure enables data minimization.
