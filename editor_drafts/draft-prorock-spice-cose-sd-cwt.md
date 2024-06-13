@@ -298,9 +298,9 @@ The following example contains claims needed to demonstrate redaction of key-val
 ``` cbor-diag
 / cose-sign1 / 18([
   / protected / << {
-    / alg / 1  : -35 / ES384 /
-    / typ / 16 : "application/sd+cwt"
-    / kid /    : "https://issuer.example/cwt-key3"
+    / alg / 1  : -35, / ES384 /
+    / typ / 16 : "application/sd+cwt",
+    / kid / 4  : 'https://issuer.example/cwt-key3'
   } >>,
   / unprotected / {
     / disclosed claims /
@@ -322,7 +322,7 @@ The following example contains claims needed to demonstrate redaction of key-val
     ]
     / sd_kbt    / TBD2 : << [
       / protected / << {
-          / alg / 1 : -35 / ES384 /
+          / alg / 1 : -35, / ES384 /
           / typ / 16 : "application/kb+cwt"
       } >>,
       / unprotected / {},
@@ -330,9 +330,9 @@ The following example contains claims needed to demonstrate redaction of key-val
         / cnonce / 39    : h'e0a156bb3f',
         / aud     / 3    : "https://verifier.example",
         / iat     / 6    : 1783000000,
-        / sd_alg  / TBD4 : -16  /SHA-256/ 
-        / sd_hash / TBD3 : h'c341bb...4a5f3f',  / hash of sd_claims  /
-                                                / using sd_alg       /
+        / sd_alg  / TBD4 : -16,  /SHA-256/
+        / sd_hash / TBD3 : h'c341bb...4a5f3f',  /hash of sd_claims   /
+                                                /using hash in sd_alg/
       >>,
       / signature / h'1237af2e...6789456'
     ] >>
@@ -340,8 +340,8 @@ The following example contains claims needed to demonstrate redaction of key-val
   / payload / <<
     / iss / 1   : "https://issuer.example",
     / sub / 2   : "https://device.example",
-    / exp / 2   : 1883000000,
-    / iat / 2   : 1683000000,
+    / exp / 4   : 1883000000,
+    / iat / 6   : 1683000000,
     / cnf / 8   : {
       / cose key / 1 : {
         / alg: ES256 /  3: 35,
@@ -354,7 +354,7 @@ The following example contains claims needed to demonstrate redaction of key-val
     / sd_alg / TBD4        : -16, / SHA-256 /
     / redacted_keys / TBD5 : [ 
         h'abbd...efef',  / redacted age_over_18 /
-        h'132d...75e7',  / redacted age_over_21 /
+        h'132d...75e7'   / redacted age_over_21 /
     ],
     / example array as map value / -65537 : [
       123,
