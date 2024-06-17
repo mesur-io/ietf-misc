@@ -32,6 +32,13 @@ organization = "Transmute"
   [author.address]
   email = "orie@transmute.industries"
 
+[[author]]
+initials = "H."
+surname = "Birkholz"
+fullname = "Henk Birkholz"
+organization = "Fraunhofer SIT"
+  [author.address]
+  email = "henk.birkholz@ietf.contact"
 
 %%%
 
