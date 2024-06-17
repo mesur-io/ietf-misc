@@ -115,29 +115,29 @@ However, feedback has been gathered from a wide range of stakeholders, some of w
 Figure 1: High level SD-CWT Issuance and Presentation Flow
 
 ``` aasvg
-Issuer                                 Holder                                    Verifier 
-  │                                      │                                          │     
-  │                                      ├───┐                                      │     
-  │                                      │   │ Key Gen                              │     
-  │              Request SD-CWT          │◄──┘                                      │     
-  │◄─────────────────────────────────────┤                                          │     
-  │                                      │                                          │     
-  ├─────────────────────────────────────►│             Request Nonce                │     
-  │              Receive SD-CWT          ├─────────────────────────────────────────►│     
-  │                                      │                                          │     
-  │                                      │◄─────────────────────────────────────────┤     
-  │                                      │             Receive Nonce                │     
-  │                                      ├───┐                                      │     
-  │                                      │   │ Redact Claims                        │     
-  │                                      │◄──┘                                      │     
-  │                                      │                                          │     
-  │                                      ├───┐                                      │     
-  │                                      │   │ Demonstrate                          │     
-  │                                      │◄──┘ Posession                            │     
-  │                                      │                                          │     
-  │                                      │             Present SD-CWT               │     
-  │                                      ├─────────────────────────────────────────►│     
-  │                                      │                                          │     
+Issuer                                 Holder                                    Verifier
+  |                                      |                                          |
+  |                                      +---+                                      |
+  |                                      |   | Key Gen                              |
+  |              Request SD-CWT          |<--+                                      |
+  |<-------------------------------------|                                          |
+  |                                      |                                          |
+  +------------------------------------->|             Request Nonce                |
+  |              Receive SD-CWT          +----------------------------------------->|
+  |                                      |                                          |
+  |                                      |<-----------------------------------------+
+  |                                      |             Receive Nonce                |
+  |                                      +---+                                      |
+  |                                      |   | Redact Claims                        |
+  |                                      |<--+                                      |
+  |                                      |                                          |
+  |                                      +---+                                      |
+  |                                      |   | Demonstrate                          |
+  |                                      |<--+ Posession                            |
+  |                                      |                                          |
+  |                                      |             Present SD-CWT               |
+  |                                      +----------------------------------------->|
+  |                                      |                                          |
 ```
 
 This diagram captures the essential details necessary to issue and present an SD-CWT.
