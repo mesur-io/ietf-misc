@@ -89,8 +89,8 @@ salted-element = [
 ]
 
 key = int / text
-TBD1 = 1111
-TBD2 = 1112
-TBD3 = 1113
-TBD4 = 1114
-TBD5 = 1115
+TBD1 = 17
+TBD2 = 18
+TBD3 = 11
+TBD4 = 12
+TBD5 = 13

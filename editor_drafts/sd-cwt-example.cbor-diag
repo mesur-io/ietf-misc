@@ -5,7 +5,7 @@
     / kid / 4  : 'https://issuer.example/cwt-key3'
   } >>,
   / unprotected / {
-    / sd_claims / 1111 : [  /these are the three disclosures/
+    / sd_claims / 17 : [  /these are the three disclosures/
         <<[
             /salt/   h'c93c7ff572c71e26',
             /claim/  "age_over_18",
@@ -21,7 +21,7 @@
             /value/  "4.1.7"
         ]>>
     ],
-    / sd_kbt    / 1112 : << 18([
+    / sd_kbt    / 18 : << 18([
       / protected / << {
           / alg / 1 : -35 / ES384 /,
           / typ / 16 : "application/kb+cwt"
@@ -31,8 +31,8 @@
         / cnonce / 39    : h'e0a156bb3f',
         / aud     / 3    : "https://verifier.example",
         / iat     / 6    : 1783000000,
-        / sd_alg  / 1114 : -16,  /SHA-256/ 
-        / sd_hash / 1113 : h'c341bb4a5f3f'  /hash of sd_claims   /
+        / sd_alg  / 12 : -16,  /SHA-256/ 
+        / sd_hash / 11 : h'c341bb4a5f3f'  /hash of sd_claims   /
                                             /using hash in sd_alg/
       } >>,
       / signature / h'1237af2e678945'
@@ -54,9 +54,9 @@
       }
     },
     / cnonce / 39 : h'12345678',
-    / sd_hash / 1113       : h'abcdef12',
-    / sd_alg /  1114       : -16, / SHA-256 /
-    / redacted_keys / 1115 : [ 
+    / sd_hash / 11       : h'abcdef12',
+    / sd_alg /  12       : -16, / SHA-256 /
+    / redacted_keys / 13 : [ 
         h'abbdefef',  / redacted age_over_18 /
         h'132d75e7'  / redacted age_over_21 /
     ],
@@ -66,7 +66,7 @@
     ],
     "address": {
         "country" : "us",            / United States /
-        /redacted_keys/ 1115 : [
+        /redacted_keys/ 13 : [
             h'adb7060403da225b',  / redacted region /
             h'e04bdfc44d3d40bc'   / redacted post_code /
         ]
