@@ -21,7 +21,7 @@
             /value/  "4.1.7"
         ]>>
     ],
-    / sd_kbt    / 1112 : << [
+    / sd_kbt    / 1112 : << 18([
       / protected / << {
           / alg / 1 : -35 / ES384 /,
           / typ / 16 : "application/kb+cwt"
@@ -36,11 +36,12 @@
                                             /using hash in sd_alg/
       } >>,
       / signature / h'1237af2e678945'
-    ] >>
+    ]) >>
   },
   / payload / << {
     / iss / 1   : "https://issuer.example",
     / sub / 2   : "https://device.example",
+    / aud / 3   : "https://verifier.example",
     / exp / 4   : 1883000000,
     / iat / 6   : 1683000000,
     / cnf / 8   : {
@@ -52,7 +53,9 @@
         / y / -3: h'6a48ccfd5d'
       }
     },
-    / sd_alg / 1114        : -16, / SHA-256 /
+    / cnonce / 39 : h'12345678',
+    / sd_hash / 1113       : h'abcdef12',
+    / sd_alg /  1114       : -16, / SHA-256 /
     / redacted_keys / 1115 : [ 
         h'abbdefef',  / redacted age_over_18 /
         h'132d75e7'  / redacted age_over_21 /
