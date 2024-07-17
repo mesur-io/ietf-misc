@@ -194,7 +194,6 @@ sd-payload = {
     ? &(cnonce: 39) ^ => bstr,
     ;
     ; sd-cwt new claims
-      &(sd_hash: TBD3) ^ => bstr,
       &(sd_alg: TBD4) ^ => int,            ; -16 for sha-256
     ? &(redacted_values: TBD5) ^ => [ * bstr ],
     * key => any
