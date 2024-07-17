@@ -317,6 +317,7 @@ kbt-payload = {
     ? &(nbf: 5) ^ => int,  ; 1683000000
       &(iat: 6) ^ => int,  ; 1683000000
       &(cnonce: 39) ^ => bstr,
+      ; matches the hash of sd_claims in the presentation token
       &(sd_hash: TBD3) ^ => bstr,
     * key => any
 }
