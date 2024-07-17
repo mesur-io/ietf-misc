@@ -178,7 +178,7 @@ sd-protected = {
 
 unprotected-presentation = {
    &(sd_kbt: TBD2) ^ => bstr .cbor kbt-cwt,
-   ? &(sd_claims: TBD1) ^ => [ +bstr .cbor salted ],
+   ? &(sd_claims: TBD1) ^ => bstr .cbor [ + bstr .cbor salted ],
    * key => any
 }
 
